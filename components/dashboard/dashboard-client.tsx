@@ -338,9 +338,9 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
       <DebtComparisonChart summary={summary} widths={chartWidths} />
 
       <div className="grid gap-4 rounded-2xl border-2 border-cashmere bg-linen p-4 md:grid-cols-4">
-        <label className="flex flex-col gap-2 font-semibold md:col-span-2">
+        <label className="flex min-w-0 flex-col gap-2 font-semibold md:col-span-2">
           Cari nama orang
-          <span className="flex min-h-11 items-center rounded-xl border-2 border-cashmere bg-linen focus-within:border-toast focus-within:outline-2 focus-within:outline-woody">
+          <span className="flex min-h-11 w-full min-w-0 items-center overflow-hidden rounded-xl border-2 border-cashmere bg-linen focus-within:border-toast focus-within:outline-2 focus-within:outline-woody">
             <Search aria-hidden="true" className="ml-3 shrink-0" size={19} />
             <input
               type="search"
@@ -351,7 +351,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                 setFeedback(null);
               }}
               placeholder="Contoh: Budi"
-              className="min-h-10 min-w-0 flex-1 bg-linen px-3 font-normal text-woody outline-none"
+              className="min-h-10 w-full min-w-0 flex-1 bg-linen px-3 font-normal text-woody outline-none"
             />
             {searchInput && (
               <button
@@ -369,7 +369,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             )}
           </span>
         </label>
-        <label className="flex flex-col gap-2 font-semibold">
+        <label className="flex min-w-0 flex-col gap-2 font-semibold">
           Status
           <select
             value={status}
@@ -384,7 +384,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             <option value="settled">Lunas</option>
           </select>
         </label>
-        <label className="flex flex-col gap-2 font-semibold">
+        <label className="flex min-w-0 flex-col gap-2 font-semibold">
           Tipe hutang
           <select
             value={type}
@@ -399,7 +399,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             <option value="i_owe">Saya hutang</option>
           </select>
         </label>
-        <label className="flex flex-col gap-2 font-semibold md:col-span-2">
+        <label className="flex min-w-0 flex-col gap-2 font-semibold md:col-span-2">
           Urutkan
           <select
             value={sort}
@@ -416,9 +416,15 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             <option value="due_desc">Tanggal terjauh</option>
           </select>
         </label>
-        <fieldset className="flex flex-col gap-2 md:col-span-2">
-          <legend className="font-semibold">Tampilan</legend>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="flex min-w-0 flex-col gap-2 md:col-span-2">
+          <p id="view-mode-label" className="font-semibold">
+            Tampilan
+          </p>
+          <div
+            role="group"
+            aria-labelledby="view-mode-label"
+            className="grid min-h-11 grid-cols-2 gap-2"
+          >
             <ViewModeButton
               active={viewMode === "entries"}
               onClick={() => setViewMode("entries")}
@@ -434,7 +440,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
               Per orang
             </ViewModeButton>
           </div>
-        </fieldset>
+        </div>
       </div>
 
       {error && (

@@ -1,143 +1,125 @@
 # Kasbon
 
-Kasbon adalah MVP pencatat hutang pribadi untuk mencatat uang yang dipinjam orang lain dari kita dan uang yang kita pinjam dari orang lain. Aplikasi dibangun sebagai hiring task dengan fokus pada alur CRUD yang jelas, nominal Rupiah yang aman, autentikasi, dan isolasi data per pengguna.
+Kasbon adalah web app untuk mencatat hutang-piutang pribadi: siapa yang berhutang kepada kita, kepada siapa kita berhutang, berapa nominalnya, dan apakah sudah lunas. Project ini dibangun dari Next.js project kosong untuk hiring task Junior Fullstack Developer.
 
-Spesifikasi produk tersedia di [`docs/PRD.md`](docs/PRD.md), sedangkan keputusan tampilan dan struktur data tersedia di [`docs/design.md`](docs/design.md) dan [`docs/ERD.md`](docs/ERD.md).
+- **Live demo:** [kasbon-app-test-lake.vercel.app](https://kasbon-app-test-lake.vercel.app)
+- **Repository:** [github.com/richierichardo/kasbon-app-test](https://github.com/richierichardo/kasbon-app-test)
 
-**Demo:** [https://kasbon-app-test-lake.vercel.app](https://kasbon-app-test-lake.vercel.app)
+## Requirement coverage
 
-## Status implementasi
-
-Sebelas langkah implementasi sudah selesai. Aplikasi mencakup fondasi Next.js, schema dan RLS, autentikasi, seluruh operasi kasbon, dashboard responsive, accessibility polish, verification suite, serta empat fitur bonus eksplorasi data.
-
-Live verifier telah dijalankan menggunakan dua akun terkonfirmasi terhadap project Supabase sendiri. Pengujian mencakup authenticated CRUD, persistence settlement, precision nominal, serta percobaan SELECT, INSERT, UPDATE, dan DELETE lintas user melalui Supabase REST API. Seluruh fixture pengujian dibersihkan kembali setelah proses selesai.
+| Area | Implementasi |
+|---|---|
+| Auth | Signup, login, logout, email confirmation, cookie-based session, dan protected dashboard menggunakan Supabase Auth. |
+| Dashboard | Tiga summary card, list kasbon, format Rupiah, tanggal relatif, status eksplisit, filter status/tipe, dan seluruh action CRUD. |
+| Form | Create/edit dengan tipe hutang, nama, nominal, tanggal default hari ini, catatan maksimal 200 karakter, serta validasi client dan server. |
+| API | Authenticated GET, POST, PATCH, dan DELETE dengan response/error Bahasa Indonesia dan status code yang sesuai. |
+| Database | Migration untuk enum, tabel, constraint, index, trigger timestamp, grants, dan owner-only RLS. |
+| Quality | TypeScript strict, tanpa explicit `any` pada source aplikasi, komponen terpisah, regression test, dan live API/RLS verifier. |
+| Deployment | Aplikasi berjalan di Vercel dan terhubung ke project Supabase sendiri. |
 
 ## Approach
 
-Keputusan teknis utama yang paling saya prioritaskan adalah menjadikan session user dan RLS sebagai dua lapis ownership boundary. API tidak menerima `user_id` dari client; identitas selalu berasal dari `supabase.auth.getUser()`, lalu setiap query tetap dijalankan menggunakan Supabase client dengan session user agar policy `auth.uid()` berlaku. Nominal disimpan sebagai PostgreSQL `bigint`, tetapi dibaca melalui generated text representation karena JSON number dapat kehilangan precision di atas `Number.MAX_SAFE_INTEGER`. Di sisi aplikasi, amount tetap berupa decimal string dan dihitung dengan `BigInt`. Pendekatan ini menjaga data user tetap terisolasi sekaligus memastikan perhitungan uang tidak berubah akibat floating point atau pembulatan JSON.
+Keputusan teknis utama yang paling saya prioritaskan adalah menjadikan verified session dan Row Level Security sebagai dua lapis ownership boundary. Route handler mengambil identitas melalui `supabase.auth.getUser()` dan tidak menerima `user_id` dari client, lalu query tetap dijalankan memakai Supabase client milik session user agar policy `auth.uid()` berlaku. Nominal disimpan sebagai PostgreSQL `bigint`, diekspos sebagai decimal string, dan dihitung menggunakan `BigInt` supaya format Rupiah, summary, serta Net tetap presisi meskipun nilainya melewati `Number.MAX_SAFE_INTEGER`.
 
-## Fitur
+## Fitur utama
 
-### Akun dan session
+### Auth dan session
 
-- Daftar dan masuk menggunakan email/password Supabase Auth.
-- Mendukung flow email confirmation melalui `/auth/confirm`.
-- Session disimpan dalam cookies dan direfresh melalui Next.js proxy.
-- Dashboard hanya dapat dibuka oleh user yang sudah terverifikasi.
-- User yang sudah login diarahkan keluar dari halaman login/signup.
+- Signup dan login menggunakan email/password.
+- Callback `/auth/confirm` menangani email confirmation.
+- Session disimpan di cookies dan direfresh melalui Next.js proxy.
+- User tanpa session diarahkan ke `/login`; user yang sudah login tidak kembali ke halaman auth.
 - Logout menghapus session dan kembali ke halaman login.
 
-### Dashboard kasbon
+### Dashboard dan business logic
 
-- Ringkasan total **Dihutang ke saya**, **Saya hutang**, dan **Net**.
-- Summary hanya menghitung kasbon yang belum lunas.
-- Nominal ditampilkan sebagai Rupiah tanpa perhitungan floating point.
-- Daftar menampilkan nama, arah hutang, nominal, tanggal relatif, tanggal absolut, catatan, dan status lunas.
-- Filter status dan arah hutang dapat dipakai bersamaan tanpa mengubah summary global.
-- Pencarian nama case-insensitive dan sorting berdasarkan nominal atau tanggal dijalankan di database.
-- Daftar dapat ditampilkan per catatan atau dikelompokkan per orang tanpa kehilangan action CRUD.
-- Bar chart membandingkan total kasbon aktif dengan kalkulasi rasio yang tetap aman untuk `BigInt`.
-- Loading, empty database, empty filtered, fetch error, dan mutation feedback tersedia.
-- Layout mobile-first memakai palette warm woody brown, ferra, toast, cashmere, dan linen.
-- Input nominal menampilkan prefix Rupiah dan pemisah ribuan tanpa mengubah nilai presisi yang dikirim ke API.
-- Input tanggal memakai format Indonesia `dd/mm/yyyy`, lalu dinormalisasi menjadi `YYYY-MM-DD` untuk database.
+- Summary **Dihutang ke saya**, **Saya hutang**, dan **Net** hanya menghitung kasbon belum lunas.
+- Net dihitung sebagai `owed_to_me - i_owe` dan selalu disertai tanda serta keterangan arah, sehingga tidak bergantung pada warna saja.
+- Nominal tampil dengan locale `id-ID`, misalnya `Rp 1.234.000`.
+- Input nominal menampilkan prefix Rupiah dan pemisah ribuan, tetapi tetap dikirim sebagai decimal string.
+- Tanggal tampil secara relatif seperti “kemarin” atau “3 hari lagi”, dengan tanggal absolut sebagai konteks.
+- Filter status dan tipe dapat dikombinasikan.
+- Create, edit, settle/unsettle, dan delete selalu dikonfirmasi server lalu melakukan refetch.
+- Status lunas disimpan pada `settled_at`; refresh browser tidak mengembalikannya ke state lama.
+- Settle bersifat idempotent: request berulang mempertahankan timestamp settlement pertama.
+- Delete memakai dialog konfirmasi dan response ownership-safe.
 
-### Pengelolaan kasbon
+### Bonus
 
-- Tambah catatan dengan arah hutang, nama orang, nominal, tanggal, dan catatan opsional.
-- Edit seluruh informasi kasbon.
-- Tandai lunas dan batalkan lunas secara persisten.
-- Settlement idempotent: settle berulang mempertahankan timestamp pertama.
-- Hapus permanen melalui dialog konfirmasi.
-- List dan summary dimuat ulang dari server setelah mutation berhasil.
+Seluruh bonus pada brief sudah diimplementasikan:
 
-### Validasi dan keamanan
-
-- Validasi dijalankan di browser dan di server.
-- API menerima input tidak tepercaya sebagai `unknown`, lalu melakukan narrowing.
-- Client tidak dapat menentukan `user_id`, `settled_at`, atau field lain di luar kontrak.
-- Seluruh endpoint memerlukan verified Supabase session.
-- Query database memakai user-session client sehingga RLS melihat identitas caller.
-- Policy RLS membatasi SELECT, INSERT, UPDATE, dan DELETE berdasarkan `auth.uid()`.
-- Missing ID dan ID milik user lain menghasilkan response `404` yang sama.
-- Aplikasi tidak memakai service-role key untuk request user-facing.
-
-## Perlindungan terhadap auto-reject
-
-| Risiko | Implementasi dan bukti |
+| Bonus | Implementasi |
 |---|---|
-| RLS membocorkan data user lain | Policy owner-only tersedia untuk SELECT, INSERT, UPDATE, dan DELETE. `pnpm verify:live` menguji langsung Supabase REST dengan dua akun: user A tidak dapat membaca, membuat atas nama, mengubah, atau menghapus row user B. |
-| Format Rupiah salah atau inkonsisten | Formatter menggunakan locale `id-ID`; UI menghasilkan format seperti `Rp 1.234.000`. Amount tidak dikonversi menjadi JavaScript `number`, dan regression test mencakup nilai di atas `Number.MAX_SAFE_INTEGER`. |
-| Status lunas hanya tersimpan di client | Status disimpan pada `settled_at` di PostgreSQL. Settle/unsettle dilakukan melalui authenticated PATCH, tetap sama setelah refresh, dan settle berulang mempertahankan timestamp pertama. |
-| Penggunaan `any` berlebihan | TypeScript strict aktif. Payload eksternal dimulai sebagai `unknown`, kemudian divalidasi dan dipersempit. Source aplikasi tidak menggunakan explicit `any`. |
-| Mock atau hardcode data di production | Dashboard hanya membaca data dari authenticated API dan Supabase. Data statis hanya muncul sebagai fixture unik di live verifier dan selalu dibersihkan dalam `finally`. |
-| Deployment tidak berjalan | Demo production tersedia pada link Vercel di bagian atas README, dengan environment production terhubung ke project Supabase sendiri. |
-| Tidak dapat menjelaskan implementasi | README mendokumentasikan data flow, endpoint, keputusan precision, RLS, settlement, keterbatasan, dan command verifikasi yang dapat dijalankan ulang. |
+| Search nama | Case-insensitive, debounce 300 ms, clear action, dan dijalankan di database. |
+| Sort jumlah/tanggal | Sort `amount bigint` dan `due_date` di PostgreSQL dengan tie-breaker `created_at`. |
+| Group per orang | Normalisasi nama case-insensitive, jumlah entry, jumlah outstanding, total tiap arah, dan accordion yang tetap memiliki action CRUD. |
+| Bar chart | Dua horizontal bar outstanding dengan label dan nilai Rupiah; rasio dihitung memakai `BigInt` tanpa chart library. |
+| UI states | Loading, database kosong, hasil filter/search kosong, fetch error, dan mutation feedback ditangani terpisah. |
+| Mobile-first | Summary responsive, control dapat wrap tanpa overflow, target sentuh minimal 44px, dan modal keyboard-friendly. |
 
-## Bonus hiring task
-
-| Bonus | Status | Implementasi |
-|---|---|---|
-| Empty, loading, dan error state | Selesai | Dashboard membedakan initial loading, fetch error dengan retry, database kosong, hasil filter kosong dengan reset, serta feedback mutation sukses/gagal. |
-| Mobile-first yang nyaman di HP | Selesai | Summary memakai dua kolom dengan Net satu baris penuh di mobile, filter dan action dapat wrap, target sentuh minimal 44px, serta modal memiliki focus trap dan scroll sesuai viewport. |
-| Search nama orang | Selesai | Pencarian case-insensitive memakai query database, debounce 300 ms, clear action, dan dapat dikombinasikan dengan filter. |
-| Sort jumlah/tanggal | Selesai | API mengurutkan langsung berdasarkan `amount bigint` atau `due_date`, dengan tie-breaker waktu dibuat. |
-| Group hutang per orang | Selesai | Toggle per orang menggabungkan nama secara case-insensitive, menampilkan jumlah entry dan total tiap arah, lalu membuka entry melalui accordion. |
-| Bar chart perbandingan | Selesai | Dua horizontal bar membandingkan outstanding piutang dan hutang tanpa dependency chart atau konversi nominal ke floating point. |
-
-## Cara kerja aplikasi
+## Arsitektur dan data flow
 
 ```text
 Browser
-  → Next.js Server Action / Route Handler
-  → Supabase client dengan session user
-  → Row Level Security
-  → PostgreSQL public.debts
+  -> Next.js Server Action / Route Handler
+  -> Supabase client dengan session user
+  -> Row Level Security
+  -> PostgreSQL public.debts
 ```
 
-Identitas user selalu berasal dari `supabase.auth.getUser()`. API tidak mempercayai `user_id` dari form, URL, atau request body. RLS tetap menjadi batas keamanan terakhir walaupun route handler sudah melakukan pemeriksaan session.
+Aturan penting:
 
-Kolom `amount` disimpan sebagai PostgreSQL `bigint` dan dikirim melalui JSON sebagai decimal string. Validasi, summary, dan Net memakai JavaScript `BigInt`, sehingga nominal di atas `Number.MAX_SAFE_INTEGER` tidak kehilangan precision.
+- `user_id` selalu berasal dari verified session.
+- Aplikasi user-facing hanya memakai publishable key; tidak ada service-role client pada request aplikasi.
+- Search, status, tipe, dan sorting hanya memengaruhi list. Summary dan chart tetap mewakili seluruh outstanding debt user.
+- Amount keluar dari API sebagai decimal string dan tidak dikonversi menjadi JavaScript `number`.
+- `settled_at = NULL` berarti belum lunas; timestamp berarti lunas.
+- Missing row dan row milik user lain menghasilkan response `404` yang sama.
 
-Status lunas disimpan pada `settled_at`. Nilai `NULL` berarti belum lunas, sedangkan timestamp berarti lunas. Status ini berasal dari database dan tetap bertahan setelah browser direfresh.
+## API
 
-## Endpoint
-
-| Method | Path | Fungsi | Success |
+| Method | Endpoint | Fungsi | Success |
 |---|---|---|---|
-| `GET` | `/api/debts?status=all&type=all&q=budi&sort=newest` | Mengambil list dengan filter, search, sorting, dan summary global milik user | `200` |
-| `POST` | `/api/debts` | Membuat kasbon baru dengan owner dari session | `201` |
-| `PATCH` | `/api/debts/[id]` | Mengedit data atau mengubah status lunas | `200` |
-| `DELETE` | `/api/debts/[id]` | Menghapus kasbon milik user | `200` |
+| `GET` | `/api/debts?status=all&type=all&q=budi&sort=newest` | List, filter, search, sort, dan summary milik user | `200` |
+| `POST` | `/api/debts` | Membuat kasbon baru | `201` |
+| `PATCH` | `/api/debts/[id]` | Mengedit atau settle/unsettle | `200` |
+| `DELETE` | `/api/debts/[id]` | Menghapus kasbon | `200` |
 
-Semua error API memakai JSON Bahasa Indonesia. Status utama yang digunakan adalah `400` untuk input invalid, `401` untuk session tidak tersedia, `404` untuk row yang tidak ada atau tidak dapat diakses, dan `500` untuk kegagalan tak terduga.
+Parameter GET:
 
-## Urutan implementasi
+- `status=all|unsettled|settled`
+- `type=all|owed_to_me|i_owe`
+- `q=<nama>` dengan panjang maksimal 100 karakter
+- `sort=newest|amount_desc|amount_asc|due_asc|due_desc`
 
-1. Bootstrap Next.js 16, TypeScript strict, Tailwind CSS v4, dan palette aplikasi.
-2. Membuat migration schema `debts`, enum, index, trigger, grants, dan RLS.
-3. Menambahkan Supabase Auth berbasis cookies dan protected route.
-4. Membuat authenticated read API, list, filter, dan summary dashboard.
-5. Menambahkan create kasbon dengan validasi client/server.
-6. Menambahkan edit serta settle/unsettle yang idempotent.
-7. Menambahkan delete dengan konfirmasi dan finalisasi filter.
-8. Memoles responsive UI, accessibility, feedback, dan tanggal relatif.
-9. Menambahkan regression tests dan live API/RLS verifier dua akun.
-10. Merapikan dokumentasi fitur, arsitektur, setup, dan keputusan teknis.
-11. Menambahkan search, sorting database, grouping per orang, dan bar chart outstanding.
+Semua endpoint memerlukan session. Error menggunakan JSON Bahasa Indonesia dengan `400` untuk input invalid, `401` untuk session tidak tersedia, `404` untuk row tidak ada/tidak dapat diakses, dan `500` untuk kegagalan tak terduga.
 
-Riwayat tersebut sengaja dipisahkan menjadi commit bermakna agar perubahan setiap tahap mudah direview.
+## Database dan RLS
 
-## Stack dan dependency
+Migration berada di `supabase/migrations/`:
 
-- Next.js 16 App Router, React, dan TypeScript strict sebagai fondasi aplikasi.
-- Tailwind CSS v4 untuk styling menggunakan palette yang diwajibkan.
-- Supabase PostgreSQL, Auth, `@supabase/supabase-js`, dan `@supabase/ssr` untuk data, autentikasi, serta session SSR.
-- Lucide React untuk ikon UI.
-- ESLint dan TypeScript compiler untuk static verification.
-- Node.js built-in test runner untuk regression tests, sehingga tidak memerlukan dependency test tambahan.
+- `0001_create_debts.sql` membuat enum, tabel `public.debts`, constraint, index, trigger, grants, dan policy RLS.
+- `0002_add_debt_amount_text.sql` menambahkan generated text representation untuk menjaga precision `bigint` saat melalui JSON.
+
+Policy role `authenticated` membatasi SELECT, INSERT, UPDATE, dan DELETE dengan ownership guard `auth.uid() = user_id`. UPDATE menggunakan `USING` dan `WITH CHECK`, sehingga user tidak dapat mengambil atau memindahkan ownership row.
+
+## Stack
+
+- Next.js 16 App Router, React 19, dan TypeScript strict.
+- Tailwind CSS v4 untuk styling.
+- Supabase PostgreSQL, Auth, `@supabase/supabase-js`, dan `@supabase/ssr`.
+- Lucide React untuk ikon yang konsisten.
+- Node.js built-in test runner agar regression suite tidak membutuhkan testing framework tambahan.
+
+Tidak ada chart library karena chart MVP cukup direpresentasikan oleh dua bar aksesibel. Dependency tambahan hanya dipakai jika memberi fungsi yang tidak praktis dibuat sendiri.
 
 ## Menjalankan secara lokal
+
+Prasyarat:
+
+- Node.js 20.9 atau lebih baru.
+- pnpm.
+- Supabase project.
 
 Install dependency:
 
@@ -145,7 +127,7 @@ Install dependency:
 pnpm install
 ```
 
-Salin `.env.example` menjadi `.env.local`, lalu isi environment aplikasi:
+Salin `.env.example` menjadi `.env.local`, kemudian isi konfigurasi aplikasi:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
@@ -153,11 +135,44 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-Pada production, isi `NEXT_PUBLIC_SITE_URL` dengan origin aplikasi Vercel tanpa trailing slash. URL `${NEXT_PUBLIC_SITE_URL}/auth/confirm` juga harus terdaftar pada Supabase Auth Redirect URLs agar link konfirmasi kembali ke aplikasi.
+Jangan menaruh secret/service-role key pada variable `NEXT_PUBLIC_*`, source aplikasi, atau repository.
 
-Jangan memasukkan service-role key ke variable `NEXT_PUBLIC_*`, source code, atau repository.
+Link Supabase CLI dan terapkan migration:
 
-Untuk menjalankan live verifier, tambahkan konfigurasi berikut hanya ke `.env.local` atau environment lokal yang aman:
+```bash
+pnpm exec supabase link --project-ref <project-ref>
+pnpm exec supabase db push
+```
+
+Pada Supabase Authentication URL Configuration:
+
+- Site URL lokal: `http://localhost:3000`
+- Redirect URL lokal: `http://localhost:3000/auth/confirm`
+- Site URL production: origin Vercel tanpa trailing slash
+- Redirect URL production: `https://<domain-vercel>/auth/confirm`
+
+Jalankan aplikasi:
+
+```bash
+pnpm dev
+```
+
+Buka [http://localhost:3000](http://localhost:3000).
+
+## Verifikasi
+
+Quality checks lokal:
+
+```bash
+pnpm test
+pnpm lint
+pnpm typecheck
+pnpm build
+```
+
+Regression suite memeriksa validator create/update, precision `BigInt`, summary dan Net, filter/search/sort parser, grouping, bar width, format Rupiah, tanggal relatif, serta static assertion migration RLS.
+
+Untuk live verification, jalankan aplikasi dan isi dua akun Supabase berbeda yang sudah confirmed:
 
 ```env
 APP_BASE_URL=http://localhost:3000
@@ -167,83 +182,51 @@ SUPABASE_TEST_USER_B_EMAIL=
 SUPABASE_TEST_USER_B_PASSWORD=
 ```
 
-Kedua akun test harus berbeda dan emailnya sudah terkonfirmasi. Credential ini tidak boleh di-commit.
-
-Link Supabase CLI ke project lalu terapkan seluruh migration secara berurutan:
-
-```bash
-pnpm exec supabase link --project-ref <project-ref>
-pnpm exec supabase db push
-```
-
-Migration `0001` membuat schema dan owner-only RLS. Migration `0002` menambahkan generated `amount_text` agar nominal `bigint` tetap presisi ketika melewati JSON.
-
-Jalankan development server:
-
-```bash
-pnpm dev
-```
-
-Aplikasi tersedia secara default di `http://localhost:3000`.
-
-## Verifikasi
-
-Regression dan quality checks lokal:
-
-```bash
-pnpm test
-pnpm lint
-pnpm typecheck
-pnpm build
-```
-
-`pnpm test` memeriksa validasi create/update, arithmetic `BigInt`, filter, format Rupiah, tanggal relatif, serta keberadaan policy penting pada migration.
-
-Live verifier tersedia melalui:
+Kemudian jalankan:
 
 ```bash
 pnpm verify:live
 ```
 
-Verifier membutuhkan aplikasi yang sedang berjalan, migration yang sudah diterapkan, publishable key, dan dua akun test terkonfirmasi. Script membuat fixture sementara, menguji API serta isolasi RLS langsung melalui Supabase REST, kemudian membersihkan fixture tersebut. Command sengaja gagal jika environment belum lengkap agar hasil yang belum diuji tidak dianggap lulus.
+Verifier membuat fixture unik dan membersihkannya dalam `finally`. Cakupannya:
 
-Hasil live verification terakhir:
+- unauthenticated request menghasilkan `401`;
+- payload, filter, UUID, dan JSON invalid menghasilkan `400`;
+- authenticated CRUD serta precision nominal;
+- search, sorting, dan kombinasi filter;
+- settlement persistence dan timestamp idempotent;
+- user A tidak dapat membaca, insert atas nama, update, atau delete row user B melalui Supabase REST;
+- missing ID dan inaccessible ID menghasilkan bentuk `404` yang sama.
+
+## Guard terhadap auto-reject
+
+| Risiko pada brief | Guard dan bukti |
+|---|---|
+| RLS bocor | Owner-only policy untuk empat operasi serta verifier REST dua user. |
+| Format Rupiah salah | Satu formatter `id-ID`, amount berbentuk string, dan test nilai di atas safe integer. |
+| “Tandai lunas” hanya di client | PATCH menyimpan `settled_at` di PostgreSQL dan dashboard refetch dari server. |
+| `any` di mana-mana | TypeScript strict; boundary eksternal dimulai sebagai `unknown` lalu divalidasi. |
+| Mock/hardcode production | Dashboard hanya membaca authenticated API dan Supabase; verifier memakai fixture sementara. |
+| Deploy tidak berjalan | Link Vercel aktif tersedia di bagian atas README. |
+| Tidak memahami kode | Data flow, kontrak API, precision, RLS, idempotence, dan trade-off dijelaskan di README serta commit dipisahkan per fitur. |
+
+## Trade-off: jika ada satu hari lagi
+
+Prioritas pertama adalah memindahkan kalkulasi summary menjadi agregasi PostgreSQL/RPC dan menambahkan cursor pagination, sehingga API tidak perlu membaca seluruh row outstanding ketika data user bertambah. Berikutnya saya akan menambahkan browser end-to-end test untuk flow email confirmation, keyboard/focus modal, date picker, grouping, dan CRUD pada viewport mobile. Sisa waktu digunakan untuk soft delete agar kesalahan hapus dapat dipulihkan tanpa mengurangi ownership isolation.
+
+## Time spent
+
+Project dikerjakan selama dua hari kalender dalam 11 tahap implementasi, termasuk setup, schema/RLS, auth, CRUD, UI polish, bonus, deployment, dan live verification. Jam efektif tidak dicatat sejak awal; commit history digunakan sebagai catatan progres yang jujur dan dapat direview.
+
+## Struktur project
 
 ```text
-✓ semua endpoint menolak request tanpa session
-✓ filter, UUID, JSON, dan payload invalid menghasilkan 400
-✓ create, list, filter, dan kalkulasi BigInt benar
-✓ settlement persisten dan idempotent
-✓ RLS SELECT, INSERT, UPDATE, dan DELETE mengisolasi dua user
-✓ edit/delete owner dan response ownership-safe benar
-```
-
-## Keputusan dan trade-off
-
-- Summary dihitung dengan `BigInt` dari row user yang terlihat melalui RLS. Pendekatan ini sederhana dan aman untuk skala MVP; agregasi SQL dapat dipertimbangkan jika volume data meningkat.
-- API mengembalikan amount sebagai string agar precision `bigint` tidak hilang dalam JSON. Konsekuensinya, client harus memformat dan menghitung nominal melalui `BigInt`.
-- Tanggal pada brief dipetakan ke `due_date` dan diwajibkan oleh form, walaupun kolom database nullable untuk kompatibilitas row lama.
-- Mutation tidak memakai optimistic update. Dashboard melakukan refetch setelah server mengonfirmasi perubahan agar UI selalu mengikuti kondisi database.
-- Penghapusan bersifat permanen karena MVP tidak meminta trash atau restore.
-- Belum ada pagination, shared debt, reminder, atau multi-currency agar fokus tetap pada requirement utama dan keamanan ownership.
-
-### Jika ada satu hari lagi
-
-Prioritas pertama adalah memindahkan summary dari kalkulasi server aplikasi menjadi agregasi PostgreSQL/RPC agar jumlah row yang dikirim tidak tumbuh bersama data user. Setelah itu saya akan menambahkan cursor pagination yang mempertahankan search, filter, dan sorting server-side. Sisa waktu dipakai untuk browser end-to-end test dengan Playwright—khususnya flow email confirmation, keyboard/focus modal, date picker, grouping, dan seluruh CRUD pada viewport mobile—serta soft delete agar penghapusan dapat dipulihkan.
-
-### Time spent
-
-Project dikerjakan bertahap dalam 11 fase implementasi selama beberapa sesi, termasuk putaran deployment dan live verification. Durasi wall-clock tidak dicatat secara presisi; commit history digunakan sebagai catatan progres yang memisahkan schema, auth, CRUD, UI polish, verification, dokumentasi, dan bonus eksplorasi data.
-
-## Struktur penting
-
-```text
-app/                 halaman, server actions, dan API route handlers
-components/          form auth, dashboard, modal, dan dialog
-lib/debts/           types, validation, formatting, filter, dan summary
-lib/supabase/        typed browser/server Supabase clients
-supabase/migrations/ versioned database schema dan RLS
-tests/               regression tests lokal
-scripts/             live API dan cross-user RLS verifier
-docs/                PRD, ERD, design, dan implementation plan
+app/                  halaman, server actions, dan route handlers
+components/           auth form, dashboard, modal, chart, dan debt list
+lib/debts/            types, validation, formatting, filter, grouping, dan summary
+lib/supabase/         typed browser/server Supabase clients
+supabase/migrations/  versioned schema dan RLS
+tests/                regression tests
+scripts/              live API dan cross-user RLS verifier
+docs/                 brief, PRD, ERD, design, dan implementation plan
 ```
