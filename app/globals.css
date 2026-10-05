@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --color-forest: #5c7057;
+  --color-sage: #89a482;
+  --color-leaf: #acc5a6;
+  --color-mist: #d1edd3;
+}
+
+@theme inline {
+  --color-forest: var(--color-forest);
+  --color-sage: var(--color-sage);
+  --color-leaf: var(--color-leaf);
+  --color-mist: var(--color-mist);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-mist);
+  color: var(--color-forest);
+  font-family: Arial, Helvetica, sans-serif;
+}
