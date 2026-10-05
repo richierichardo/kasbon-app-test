@@ -4,7 +4,7 @@ MVP pencatat kasbon pribadi, dibangun mengikuti spesifikasi di [`docs/PRD.md`](d
 
 ## Status
 
-Plan 1 selesai: fondasi Next.js 16 App Router, TypeScript strict, Tailwind CSS v4, dan Lucide React sudah terpasang.
+Plan 1–4 selesai secara kode: fondasi Next.js, migration/RLS, Supabase Auth, GET debt API, dan dashboard read-only sudah tersedia. Verifikasi live Supabase dan deployment masih menjadi pekerjaan lanjutan.
 
 ## Dependency utama
 
@@ -32,4 +32,4 @@ pnpm typecheck
 pnpm build
 ```
 
-Fitur aplikasi, Supabase, migration, dan environment variables akan ditambahkan mengikuti [`docs/implementation-plan.md`](docs/implementation-plan.md).
+Migration database tersedia di `supabase/migrations/0001_create_debts.sql`. Terapkan migration tersebut ke project Supabase sebelum menjalankan flow auth dan dashboard secara live. Fitur create/edit/settle/delete akan ditambahkan mengikuti [`docs/implementation-plan.md`](docs/implementation-plan.md).

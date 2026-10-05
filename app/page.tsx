@@ -1,6 +1,7 @@
 import { HandCoins } from "lucide-react";
 
 import { signOut } from "@/app/auth/actions";
+import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -32,18 +33,7 @@ export default async function Home() {
           </form>
         </div>
       </header>
-      <section className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-12">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em]">
-          Dashboard
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Catatan kasbon yang simpel.
-        </h1>
-        <p className="max-w-xl text-lg">
-          Kamu masuk sebagai <span className="font-bold">{user.email}</span>.
-          Fitur pencatatan utang akan hadir di langkah berikutnya.
-        </p>
-      </section>
+      <DashboardClient userEmail={user.email ?? "akun kamu"} />
     </main>
   );
 }
