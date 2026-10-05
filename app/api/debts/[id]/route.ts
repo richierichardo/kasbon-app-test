@@ -39,13 +39,6 @@ export async function PATCH(
 ) {
   const { id } = await context.params;
 
-  if (!uuidPattern.test(id)) {
-    return NextResponse.json(
-      { error: "ID catatan kasbon belum valid." },
-      { status: 400 },
-    );
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,6 +48,13 @@ export async function PATCH(
     return NextResponse.json(
       { error: "Kamu harus masuk terlebih dahulu." },
       { status: 401 },
+    );
+  }
+
+  if (!uuidPattern.test(id)) {
+    return NextResponse.json(
+      { error: "ID catatan kasbon belum valid." },
+      { status: 400 },
     );
   }
 
@@ -137,13 +137,6 @@ export async function DELETE(
 ) {
   const { id } = await context.params;
 
-  if (!uuidPattern.test(id)) {
-    return NextResponse.json(
-      { error: "ID catatan kasbon belum valid." },
-      { status: 400 },
-    );
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -153,6 +146,13 @@ export async function DELETE(
     return NextResponse.json(
       { error: "Kamu harus masuk terlebih dahulu." },
       { status: 401 },
+    );
+  }
+
+  if (!uuidPattern.test(id)) {
+    return NextResponse.json(
+      { error: "ID catatan kasbon belum valid." },
+      { status: 400 },
     );
   }
 

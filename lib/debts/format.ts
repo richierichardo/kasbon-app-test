@@ -11,9 +11,10 @@ export function formatRupiah(amount: string): string {
 export function formatDebtDate(
   dueDate: string | null,
   createdAt: string,
+  referenceDate = new Date(),
 ): string {
   const target = getDebtDate(dueDate, createdAt);
-  const today = new Date();
+  const today = referenceDate;
   const targetDay = Date.UTC(
     target.getFullYear(),
     target.getMonth(),

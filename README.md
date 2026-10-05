@@ -4,7 +4,7 @@ MVP pencatat kasbon pribadi, dibangun mengikuti spesifikasi di [`docs/PRD.md`](d
 
 ## Status
 
-Plan 1–4 selesai secara kode: fondasi Next.js, migration/RLS, Supabase Auth, GET debt API, dan dashboard read-only sudah tersedia. Verifikasi live Supabase dan deployment masih menjadi pekerjaan lanjutan.
+Plan 1–9 selesai secara kode: fondasi, migration/RLS, auth, seluruh CRUD kasbon, dashboard responsive, dan verification suite sudah tersedia. Verifikasi live Supabase dua akun belum dijalankan karena project credential dan akun test belum tersedia; deployment tetap menjadi pekerjaan Plan 10.
 
 ## Dependency utama
 
@@ -27,9 +27,28 @@ Salin `.env.example` menjadi `.env.local`, lalu isi URL project Supabase dan pub
 Verifikasi yang tersedia:
 
 ```bash
+pnpm test
 pnpm lint
 pnpm typecheck
 pnpm build
 ```
 
-Migration database tersedia di `supabase/migrations/0001_create_debts.sql`. Terapkan migration tersebut ke project Supabase sebelum menjalankan flow auth dan dashboard secara live. Fitur create/edit/settle/delete akan ditambahkan mengikuti [`docs/implementation-plan.md`](docs/implementation-plan.md).
+Migration database tersedia di `supabase/migrations/0001_create_debts.sql`. Terapkan migration tersebut ke project Supabase sebelum menjalankan flow auth dan dashboard secara live.
+
+## Verifikasi live API dan RLS
+
+Verifier live memakai publishable key dan session dua user biasa, bukan service-role key. Siapkan dua akun berbeda yang emailnya sudah dikonfirmasi, lalu isi variable `SUPABASE_TEST_USER_A_*` dan `SUPABASE_TEST_USER_B_*` di `.env.local`. Data fixture diberi nama unik dan dibersihkan setelah test.
+
+Jalankan aplikasi di terminal pertama:
+
+```bash
+pnpm dev
+```
+
+Lalu jalankan verifier di terminal kedua:
+
+```bash
+pnpm verify:live
+```
+
+Command tersebut menguji status API, validasi, kalkulasi `bigint`, settlement idempotent, response ownership-safe, dan isolasi SELECT/INSERT/UPDATE/DELETE langsung melalui Supabase REST. Command sengaja gagal jika environment, migration, server lokal, atau akun test belum siap; kegagalan tidak boleh dicatat sebagai verifikasi yang lulus.

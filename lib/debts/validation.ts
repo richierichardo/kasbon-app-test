@@ -49,6 +49,13 @@ export function validateCreateDebtInput(
   value: unknown,
 ): CreateDebtValidation {
   const errors: CreateDebtFieldErrors = {};
+  const allowedFields = new Set([
+    "type",
+    "counterpart_name",
+    "amount",
+    "due_date",
+    "note",
+  ]);
 
   if (!isRecord(value)) {
     return {
@@ -58,7 +65,7 @@ export function validateCreateDebtInput(
     };
   }
 
-  if (Object.prototype.hasOwnProperty.call(value, "user_id")) {
+  if (Object.keys(value).some((key) => !allowedFields.has(key))) {
     return {
       success: false,
       errors: {},

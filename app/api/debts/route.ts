@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { parseStatusFilter, parseTypeFilter } from "@/lib/debts/filters";
+import { buildDebtSummary } from "@/lib/debts/summary";
 import type {
   CreateDebtInput,
   DebtDTO,
@@ -26,29 +27,6 @@ function toDebtDTO(row: DebtRow): DebtDTO {
     settled_at: row.settled_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
-  };
-}
-
-function buildSummary(rows: DebtRow[]) {
-  let owedToMe = BigInt(0);
-  let iOwe = BigInt(0);
-
-  for (const row of rows) {
-    if (row.settled_at !== null) {
-      continue;
-    }
-
-    if (row.type === "owed_to_me") {
-      owedToMe += BigInt(String(row.amount));
-    } else {
-      iOwe += BigInt(String(row.amount));
-    }
-  }
-
-  return {
-    owed_to_me: owedToMe.toString(),
-    i_owe: iOwe.toString(),
-    net: (owedToMe - iOwe).toString(),
   };
 }
 
@@ -109,7 +87,7 @@ export async function GET(request: Request) {
 
   const response: DebtListResponse = {
     data: listResult.data.map(toDebtDTO),
-    summary: buildSummary(summaryResult.data),
+    summary: buildDebtSummary(summaryResult.data),
   };
 
   return NextResponse.json(response);
