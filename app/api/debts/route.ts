@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { parseStatusFilter, parseTypeFilter } from "@/lib/debts/filters";
 import type {
+  CreateDebtInput,
   DebtDTO,
   DebtListResponse,
   DebtStatusFilter,
@@ -9,6 +10,7 @@ import type {
 } from "@/lib/debts/types";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
+import { validateCreateDebtInput } from "@/lib/debts/validation";
 
 type DebtRow = Database["public"]["Tables"]["debts"]["Row"];
 
@@ -111,4 +113,60 @@ export async function GET(request: Request) {
   };
 
   return NextResponse.json(response);
+}
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Kamu harus masuk terlebih dahulu." },
+      { status: 401 },
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Data kasbon belum valid." },
+      { status: 400 },
+    );
+  }
+
+  const validation = validateCreateDebtInput(payload);
+  if (!validation.success) {
+    return NextResponse.json(
+      { error: validation.message, fields: validation.errors },
+      { status: 400 },
+    );
+  }
+
+  const input: CreateDebtInput = validation.data;
+  const { data, error } = await supabase
+    .from("debts")
+    .insert({
+      user_id: user.id,
+      type: input.type,
+      counterpart_name: input.counterpart_name,
+      amount: input.amount,
+      due_date: input.due_date,
+      note: input.note ?? null,
+      settled_at: null,
+    })
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json(
+      { error: "Catatan kasbon belum bisa disimpan. Coba lagi sebentar." },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ data: toDebtDTO(data) }, { status: 201 });
 }

@@ -3,6 +3,25 @@ import type { DebtType } from "@/lib/supabase/database.types";
 export type DebtStatusFilter = "all" | "unsettled" | "settled";
 export type DebtTypeFilter = "all" | DebtType;
 
+export type CreateDebtInput = {
+  type: DebtType;
+  counterpart_name: string;
+  amount: string;
+  due_date: string;
+  note?: string | null;
+};
+
+export type CreateDebtField =
+  | "type"
+  | "counterpart_name"
+  | "amount"
+  | "due_date"
+  | "note";
+
+export type CreateDebtFieldErrors = Partial<
+  Record<CreateDebtField, string>
+>;
+
 export type DebtDTO = {
   id: string;
   user_id: string;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { CreateDebtForm } from "@/components/dashboard/create-debt-form";
 import { formatDebtDate, formatRupiah } from "@/lib/debts/format";
 import type {
   ApiErrorResponse,
@@ -98,6 +99,8 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
+  const [refresh, setRefresh] = useState(0);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -140,7 +143,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
     void loadDebts();
 
     return () => controller.abort();
-  }, [retry, status, type]);
+  }, [refresh, retry, status, type]);
 
   const summary = result?.summary ?? {
     owed_to_me: "0",
@@ -154,13 +157,34 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         <p className="text-sm font-semibold uppercase tracking-[0.2em]">
           Dashboard
         </p>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Catatan kasbon
-        </h1>
-        <p>
-          Kamu masuk sebagai <span className="font-bold">{userEmail}</span>.
-        </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Catatan kasbon
+            </h1>
+            <p>
+              Kamu masuk sebagai <span className="font-bold">{userEmail}</span>.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="min-h-11 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+          >
+            + Catat baru
+          </button>
+        </div>
       </div>
+
+      {isCreateOpen && (
+        <CreateDebtForm
+          onClose={() => setIsCreateOpen(false)}
+          onSuccess={() => {
+            setIsCreateOpen(false);
+            setRefresh((current) => current + 1);
+          }}
+        />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryCard label="Dihutang ke saya" amount={summary.owed_to_me} />
@@ -231,9 +255,18 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           </h2>
           <p className="mt-2">
             {status === "all" && type === "all"
-              ? "Catatan baru akan muncul di sini setelah fitur tambah selesai."
+              ? "Belum ada catatan. Tambahkan kasbon pertamamu sekarang."
               : "Coba ganti filter untuk melihat catatan lainnya."}
           </p>
+          {status === "all" && type === "all" && (
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="mt-4 min-h-11 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+            >
+              + Catat baru
+            </button>
+          )}
         </div>
       )}
 
