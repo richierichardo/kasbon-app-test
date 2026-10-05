@@ -6,7 +6,7 @@ import { signUp } from "@/app/auth/actions";
 export default function SignupPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-mist px-6 py-12 text-forest">
-      <section className="w-full max-w-md rounded-3xl border-2 border-leaf bg-mist p-6 shadow-sm sm:p-8">
+      <section className="w-full max-w-md rounded-3xl border-2 border-leaf bg-mist p-6 sm:p-8">
         <div className="mb-8 flex flex-col gap-3">
           <HandCoins aria-hidden="true" className="text-sage" size={36} />
           <p className="text-sm font-semibold uppercase tracking-[0.2em]">

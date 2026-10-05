@@ -1,7 +1,9 @@
 "use client";
 
+import { ArrowDownLeft, ArrowUpRight, Save, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { Modal } from "@/components/ui/modal";
 import { validateCreateDebtInput, validateUpdateDebtInput } from "@/lib/debts/validation";
 import type {
   ApiErrorResponse,
@@ -117,13 +119,12 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-10 flex items-start justify-center overflow-y-auto bg-forest p-4 sm:items-center">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="debt-form-title"
-        className="my-4 w-full max-w-xl rounded-3xl border-2 border-leaf bg-mist p-6 text-forest sm:p-8"
-      >
+    <Modal
+      labelledBy="debt-form-title"
+      describedBy="debt-form-description"
+      onClose={onClose}
+      closeDisabled={submitting}
+    >
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em]">
@@ -132,14 +133,20 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
             <h2 id="debt-form-title" className="mt-2 text-2xl font-bold">
               {isEdit ? "Perbarui kasbon" : "Tambah kasbon"}
             </h2>
+            <p id="debt-form-description" className="mt-2">
+              {isEdit
+                ? "Ubah informasi kasbon yang sudah tercatat."
+                : "Isi detail kasbon baru dengan nominal Rupiah bulat."}
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
             aria-label="Tutup form"
-            className="min-h-11 rounded-xl border-2 border-leaf px-3 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed"
+            className="flex min-h-11 items-center gap-2 rounded-xl border-2 border-leaf px-3 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed disabled:bg-leaf"
           >
+            <X aria-hidden="true" size={18} />
             Tutup
           </button>
         </div>
@@ -148,7 +155,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 font-semibold">Tipe hutang</legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-leaf p-3">
+              <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 p-3 focus-within:outline-2 focus-within:outline-forest ${values.type === "owed_to_me" ? "border-forest bg-leaf" : "border-leaf"}`}>
                 <input
                   type="radio"
                   name="type"
@@ -156,9 +163,10 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
                   checked={values.type === "owed_to_me"}
                   onChange={() => updateValue("type", "owed_to_me")}
                 />
+                <ArrowDownLeft aria-hidden="true" size={20} />
                 <span>Saya dihutang</span>
               </label>
-              <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-leaf p-3">
+              <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 p-3 focus-within:outline-2 focus-within:outline-forest ${values.type === "i_owe" ? "border-forest bg-leaf" : "border-leaf"}`}>
                 <input
                   type="radio"
                   name="type"
@@ -166,6 +174,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
                   checked={values.type === "i_owe"}
                   onChange={() => updateValue("type", "i_owe")}
                 />
+                <ArrowUpRight aria-hidden="true" size={20} />
                 <span>Saya hutang</span>
               </label>
             </div>
@@ -223,18 +232,19 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="min-h-12 rounded-xl bg-sage px-5 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait"
+            aria-busy={submitting}
+            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-sage px-5 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait disabled:bg-leaf"
           >
+            <Save aria-hidden="true" size={19} />
             {submitting ? "Menyimpan..." : isEdit ? "Simpan perubahan" : "Simpan catatan"}
           </button>
         </form>
-      </section>
-    </div>
+    </Modal>
   );
 }
 
 const inputClassName =
-  "min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-sage";
+  "min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-forest focus:outline-2 focus:outline-forest";
 
 function FieldError({ message }: { message: string }) {
   return (

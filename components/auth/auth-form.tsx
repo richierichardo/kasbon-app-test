@@ -1,5 +1,6 @@
 "use client";
 
+import { LogIn, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
 
@@ -33,7 +34,7 @@ export function AuthForm({ action, mode, initialError }: AuthFormProps) {
           autoComplete="email"
           defaultValue={state.email}
           required
-          className="min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-sage"
+          className="min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-forest focus:outline-2 focus:outline-forest"
         />
       </div>
 
@@ -48,7 +49,7 @@ export function AuthForm({ action, mode, initialError }: AuthFormProps) {
           autoComplete={isLogin ? "current-password" : "new-password"}
           minLength={6}
           required
-          className="min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-sage"
+          className="min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-forest focus:outline-2 focus:outline-forest"
         />
         {!isLogin && <p className="text-sm">Minimal 6 karakter.</p>}
       </div>
@@ -68,8 +69,14 @@ export function AuthForm({ action, mode, initialError }: AuthFormProps) {
       <button
         type="submit"
         disabled={pending}
-        className="min-h-12 rounded-xl bg-sage px-5 font-bold text-forest focus:outline-2 focus:outline-forest disabled:cursor-wait"
+        aria-busy={pending}
+        className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-sage px-5 font-bold text-forest focus:outline-2 focus:outline-forest disabled:cursor-wait disabled:bg-leaf"
       >
+        {isLogin ? (
+          <LogIn aria-hidden="true" size={19} />
+        ) : (
+          <UserPlus aria-hidden="true" size={19} />
+        )}
         {pending ? "Sebentar..." : isLogin ? "Masuk" : "Buat akun"}
       </button>
 

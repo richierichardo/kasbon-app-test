@@ -24,3 +24,17 @@ body {
   color: var(--color-forest);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+button,
+input,
+select,
+textarea {
+  accent-color: var(--color-forest);
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  color: var(--color-forest);
+}

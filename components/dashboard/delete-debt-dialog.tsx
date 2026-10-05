@@ -1,7 +1,9 @@
 "use client";
 
+import { Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { Modal } from "@/components/ui/modal";
 import { formatRupiah } from "@/lib/debts/format";
 import type {
   ApiErrorResponse,
@@ -88,14 +90,14 @@ export function DeleteDebtDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-forest p-4">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="delete-debt-title"
-        aria-describedby="delete-debt-description"
-        className="w-full max-w-md rounded-3xl border-2 border-leaf bg-mist p-6 text-forest sm:p-8"
-      >
+    <Modal
+      labelledBy="delete-debt-title"
+      describedBy="delete-debt-description"
+      onClose={onClose}
+      closeDisabled={deleting}
+      className="max-w-md"
+      layer="high"
+    >
         <p className="text-sm font-semibold uppercase tracking-[0.2em]">
           Konfirmasi
         </p>
@@ -123,20 +125,22 @@ export function DeleteDebtDialog({
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="min-h-11 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed disabled:bg-leaf"
           >
+            <X aria-hidden="true" size={18} />
             Batal
           </button>
           <button
             type="button"
             onClick={() => void deleteDebt()}
             disabled={deleting}
-            className="min-h-11 rounded-xl bg-forest px-4 font-bold text-mist focus:outline-2 focus:outline-sage disabled:cursor-wait"
+            aria-busy={deleting}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-forest px-4 font-bold text-mist focus:outline-2 focus:outline-sage disabled:cursor-wait disabled:bg-leaf disabled:text-forest"
           >
+            <Trash2 aria-hidden="true" size={18} />
             {deleting ? "Menghapus..." : "Ya, hapus"}
           </button>
         </div>
-      </section>
-    </div>
+    </Modal>
   );
 }

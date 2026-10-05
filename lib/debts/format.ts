@@ -12,8 +12,41 @@ export function formatDebtDate(
   dueDate: string | null,
   createdAt: string,
 ): string {
-  const value = dueDate ? `${dueDate}T00:00:00` : createdAt;
-  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(
-    new Date(value),
+  const target = getDebtDate(dueDate, createdAt);
+  const today = new Date();
+  const targetDay = Date.UTC(
+    target.getFullYear(),
+    target.getMonth(),
+    target.getDate(),
   );
+  const todayDay = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const difference = Math.round((targetDay - todayDay) / 86_400_000);
+
+  if (difference === 0) return "hari ini";
+  if (difference === -1) return "kemarin";
+  if (difference === 1) return "besok";
+  if (difference < 0) return `${Math.abs(difference)} hari lalu`;
+  return `${difference} hari lagi`;
+}
+
+export function formatDebtDateAbsolute(
+  dueDate: string | null,
+  createdAt: string,
+): string {
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(
+    getDebtDate(dueDate, createdAt),
+  );
+}
+
+function getDebtDate(dueDate: string | null, createdAt: string): Date {
+  if (!dueDate) {
+    return new Date(createdAt);
+  }
+
+  const [year, month, day] = dueDate.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }

@@ -1,10 +1,26 @@
 "use client";
 
+import {
+  CalendarDays,
+  CheckCircle2,
+  CircleDollarSign,
+  Pencil,
+  Plus,
+  RefreshCcw,
+  RotateCcw,
+  Trash2,
+  Undo2,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { DebtForm } from "@/components/dashboard/debt-form";
 import { DeleteDebtDialog } from "@/components/dashboard/delete-debt-dialog";
-import { formatDebtDate, formatRupiah } from "@/lib/debts/format";
+import {
+  formatDebtDate,
+  formatDebtDateAbsolute,
+  formatRupiah,
+} from "@/lib/debts/format";
 import type {
   ApiErrorResponse,
   DebtDTO,
@@ -78,11 +94,18 @@ function readApiError(value: unknown): string {
   return "Data kasbon belum bisa dimuat. Coba lagi sebentar.";
 }
 
-function formatSignedRupiah(amount: string): string {
+function formatNet(amount: string): { value: string; detail: string } {
   const value = BigInt(amount);
+  if (value === BigInt(0)) {
+    return { value: formatRupiah("0"), detail: "Seimbang" };
+  }
+
   const sign = value < BigInt(0) ? "−" : "+";
   const absolute = value < BigInt(0) ? -value : value;
-  return `${sign} ${formatRupiah(absolute.toString())}`;
+  return {
+    value: `${sign} ${formatRupiah(absolute.toString())}`,
+    detail: value < BigInt(0) ? "Lebih banyak hutang" : "Lebih banyak piutang",
+  };
 }
 
 function typeLabel(type: DebtDTO["type"]): string {
@@ -105,11 +128,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
   const [editingDebt, setEditingDebt] = useState<DebtDTO | null>(null);
   const [deletingDebt, setDeletingDebt] = useState<DebtDTO | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
 
   async function toggleSettled(debt: DebtDTO) {
     setMutatingId(debt.id);
-    setMutationError(null);
+    setFeedback(null);
 
     try {
       const response = await fetch(`/api/debts/${debt.id}`, {
@@ -123,13 +149,22 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         throw new Error(readApiError(payload));
       }
 
+      setFeedback({
+        kind: "success",
+        message:
+          debt.settled_at === null
+            ? "Kasbon berhasil ditandai lunas."
+            : "Status lunas berhasil dibatalkan.",
+      });
       setRefresh((current) => current + 1);
     } catch (error) {
-      setMutationError(
-        error instanceof Error
-          ? error.message
-          : "Status kasbon belum bisa diperbarui. Coba lagi sebentar.",
-      );
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Status kasbon belum bisa diperbarui. Coba lagi sebentar.",
+      });
     } finally {
       setMutatingId(null);
     }
@@ -183,6 +218,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
     i_owe: "0",
     net: "0",
   };
+  const net = formatNet(summary.net);
 
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-8 sm:py-12">
@@ -201,10 +237,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           </div>
           <button
             type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="min-h-11 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+            onClick={() => {
+              setFeedback(null);
+              setIsCreateOpen(true);
+            }}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
           >
-            + Catat baru
+            <Plus aria-hidden="true" size={19} />
+            Catat baru
           </button>
         </div>
       </div>
@@ -215,6 +255,10 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           onClose={() => setIsCreateOpen(false)}
           onSuccess={() => {
             setIsCreateOpen(false);
+            setFeedback({
+              kind: "success",
+              message: "Catatan kasbon berhasil ditambahkan.",
+            });
             setRefresh((current) => current + 1);
           }}
         />
@@ -227,6 +271,10 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           onClose={() => setEditingDebt(null)}
           onSuccess={() => {
             setEditingDebt(null);
+            setFeedback({
+              kind: "success",
+              message: "Catatan kasbon berhasil diperbarui.",
+            });
             setRefresh((current) => current + 1);
           }}
         />
@@ -238,18 +286,24 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           onClose={() => setDeletingDebt(null)}
           onDeleted={() => {
             setDeletingDebt(null);
+            setFeedback({
+              kind: "success",
+              message: "Catatan kasbon berhasil dihapus.",
+            });
             setRefresh((current) => current + 1);
           }}
         />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <SummaryCard label="Dihutang ke saya" amount={summary.owed_to_me} />
         <SummaryCard label="Saya hutang" amount={summary.i_owe} />
         <SummaryCard
           label="Net"
-          amount={formatSignedRupiah(summary.net)}
+          amount={net.value}
+          detail={net.detail}
           isFormatted
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 
@@ -260,7 +314,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             value={status}
             onChange={(event) => {
               setStatus(event.target.value as DebtStatusFilter);
-              setMutationError(null);
+              setFeedback(null);
             }}
             className="min-h-11 rounded-xl border-2 border-leaf bg-mist px-3 font-normal text-forest outline-none focus:border-sage"
           >
@@ -275,7 +329,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             value={type}
             onChange={(event) => {
               setType(event.target.value as DebtTypeFilter);
-              setMutationError(null);
+              setFeedback(null);
             }}
             className="min-h-11 rounded-xl border-2 border-leaf bg-mist px-3 font-normal text-forest outline-none focus:border-sage"
           >
@@ -294,27 +348,44 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           <button
             type="button"
             onClick={() => setRetry((current) => current + 1)}
-            className="min-h-11 w-fit rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+            className="flex min-h-11 w-fit items-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
           >
+            <RefreshCcw aria-hidden="true" size={18} />
             Coba lagi
           </button>
         </div>
       )}
 
-      {mutationError && (
-        <p
-          role="alert"
-          aria-live="assertive"
-          className="rounded-2xl border-2 border-forest bg-leaf p-4 font-semibold"
+      {feedback && (
+        <div
+          role={feedback.kind === "error" ? "alert" : "status"}
+          aria-live={feedback.kind === "error" ? "assertive" : "polite"}
+          className="flex items-start justify-between gap-4 rounded-2xl border-2 border-forest bg-leaf p-4 font-semibold"
         >
-          {mutationError}
-        </p>
+          <div className="flex items-center gap-3">
+            {feedback.kind === "success" ? (
+              <CheckCircle2 aria-hidden="true" className="shrink-0" size={20} />
+            ) : (
+              <CircleDollarSign aria-hidden="true" className="shrink-0" size={20} />
+            )}
+            <p>{feedback.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            aria-label="Tutup pemberitahuan"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-forest focus:outline-2 focus:outline-forest"
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
+        </div>
       )}
 
       {loading && (
-        <p role="status" className="rounded-2xl border-2 border-leaf p-6">
-          Lagi memuat catatan kasbon...
-        </p>
+        <div role="status" className="flex items-center gap-3 rounded-2xl border-2 border-leaf p-6">
+          <RefreshCcw aria-hidden="true" size={20} />
+          <p>Lagi memuat catatan kasbon...</p>
+        </div>
       )}
 
       {!loading && !error && result?.data.length === 0 && (
@@ -332,10 +403,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           {status === "all" && type === "all" && (
             <button
               type="button"
-              onClick={() => setIsCreateOpen(true)}
-              className="mt-4 min-h-11 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+              onClick={() => {
+                setFeedback(null);
+                setIsCreateOpen(true);
+              }}
+              className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
             >
-              + Catat baru
+              <Plus aria-hidden="true" size={19} />
+              Catat baru
             </button>
           )}
           {(status !== "all" || type !== "all") && (
@@ -344,10 +419,11 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
               onClick={() => {
                 setStatus("all");
                 setType("all");
-                setMutationError(null);
+                setFeedback(null);
               }}
-              className="mt-4 min-h-11 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest"
+              className="mt-4 flex min-h-11 items-center gap-2 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest"
             >
+              <RotateCcw aria-hidden="true" size={18} />
               Reset filter
             </button>
           )}
@@ -369,25 +445,41 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                 <p className="text-xl font-bold">{formatRupiah(debt.amount)}</p>
               </div>
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-                <span>{formatDebtDate(debt.due_date, debt.created_at)}</span>
-                <span className="font-semibold">{statusLabel(debt)}</span>
+                <span className="flex items-center gap-2" title={formatDebtDateAbsolute(debt.due_date, debt.created_at)}>
+                  <CalendarDays aria-hidden="true" size={17} />
+                  {formatDebtDate(debt.due_date, debt.created_at)} · {formatDebtDateAbsolute(debt.due_date, debt.created_at)}
+                </span>
+                <span className="flex items-center gap-2 font-semibold">
+                  <CheckCircle2 aria-hidden="true" size={17} />
+                  {statusLabel(debt)}
+                </span>
               </div>
               {debt.note && <p className="mt-3">{debt.note}</p>}
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => setEditingDebt(debt)}
+                  onClick={() => {
+                    setFeedback(null);
+                    setEditingDebt(debt);
+                  }}
                   disabled={mutatingId === debt.id}
-                  className="min-h-11 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed"
+                  className="flex min-h-11 items-center gap-2 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed disabled:bg-leaf"
                 >
+                  <Pencil aria-hidden="true" size={18} />
                   Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => void toggleSettled(debt)}
                   disabled={mutatingId === debt.id}
-                  className="min-h-11 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait"
+                  aria-busy={mutatingId === debt.id}
+                  className="flex min-h-11 items-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait disabled:bg-leaf"
                 >
+                  {debt.settled_at === null ? (
+                    <CheckCircle2 aria-hidden="true" size={18} />
+                  ) : (
+                    <Undo2 aria-hidden="true" size={18} />
+                  )}
                   {mutatingId === debt.id
                     ? "Menyimpan..."
                     : debt.settled_at === null
@@ -396,10 +488,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDeletingDebt(debt)}
+                  onClick={() => {
+                    setFeedback(null);
+                    setDeletingDebt(debt);
+                  }}
                   disabled={mutatingId === debt.id}
-                  className="min-h-11 rounded-xl bg-forest px-4 font-bold text-mist focus:outline-2 focus:outline-sage disabled:cursor-not-allowed"
+                  className="flex min-h-11 items-center gap-2 rounded-xl bg-forest px-4 font-bold text-mist focus:outline-2 focus:outline-sage disabled:cursor-not-allowed disabled:bg-leaf disabled:text-forest"
                 >
+                  <Trash2 aria-hidden="true" size={18} />
                   Hapus
                 </button>
               </div>
@@ -415,17 +511,22 @@ function SummaryCard({
   label,
   amount,
   isFormatted = false,
+  detail,
+  className = "",
 }: {
   label: string;
   amount: string;
   isFormatted?: boolean;
+  detail?: string;
+  className?: string;
 }) {
   return (
-    <article className="rounded-2xl border-2 border-leaf bg-leaf p-5">
+    <article className={`min-w-0 rounded-2xl border-2 border-leaf bg-leaf p-4 sm:p-5 ${className}`}>
       <p className="font-semibold">{label}</p>
-      <p className="mt-3 text-2xl font-bold tabular-nums">
+      <p className="mt-3 break-words text-xl font-bold tabular-nums sm:text-2xl">
         {isFormatted ? amount : formatRupiah(amount)}
       </p>
+      {detail && <p className="mt-2 text-sm font-semibold">{detail}</p>}
     </article>
   );
 }
