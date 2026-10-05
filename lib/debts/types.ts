@@ -11,6 +11,15 @@ export type CreateDebtInput = {
   note?: string | null;
 };
 
+export type UpdateDebtInput = {
+  type?: DebtType;
+  counterpart_name?: string;
+  amount?: string;
+  due_date?: string;
+  note?: string | null;
+  settled?: boolean;
+};
+
 export type CreateDebtField =
   | "type"
   | "counterpart_name"
@@ -20,6 +29,10 @@ export type CreateDebtField =
 
 export type CreateDebtFieldErrors = Partial<
   Record<CreateDebtField, string>
+>;
+
+export type UpdateDebtFieldErrors = Partial<
+  Record<CreateDebtField | "settled", string>
 >;
 
 export type DebtDTO = {
@@ -48,4 +61,5 @@ export type DebtListResponse = {
 
 export type ApiErrorResponse = {
   error: string;
+  fields?: CreateDebtFieldErrors | UpdateDebtFieldErrors;
 };

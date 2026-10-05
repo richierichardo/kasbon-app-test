@@ -1,6 +1,8 @@
 import type {
   CreateDebtFieldErrors,
   CreateDebtInput,
+  UpdateDebtFieldErrors,
+  UpdateDebtInput,
 } from "@/lib/debts/types";
 
 const MAX_BIGINT = BigInt("9223372036854775807");
@@ -10,6 +12,14 @@ export type CreateDebtValidation =
   | {
       success: false;
       errors: CreateDebtFieldErrors;
+      message: "Data kasbon belum valid.";
+    };
+
+export type UpdateDebtValidation =
+  | { success: true; data: UpdateDebtInput }
+  | {
+      success: false;
+      errors: UpdateDebtFieldErrors;
       message: "Data kasbon belum valid.";
     };
 
@@ -137,4 +147,117 @@ export function validateCreateDebtInput(
       note: typeof note === "string" && note.trim() ? note.trim() : null,
     },
   };
+}
+
+export function validateUpdateDebtInput(
+  value: unknown,
+): UpdateDebtValidation {
+  const errors: UpdateDebtFieldErrors = {};
+  const allowedFields = new Set([
+    "type",
+    "counterpart_name",
+    "amount",
+    "due_date",
+    "note",
+    "settled",
+  ]);
+
+  if (!isRecord(value) || Object.keys(value).length === 0) {
+    return {
+      success: false,
+      errors,
+      message: "Data kasbon belum valid.",
+    };
+  }
+
+  if (
+    Object.keys(value).some(
+      (key) => !allowedFields.has(key),
+    )
+  ) {
+    return {
+      success: false,
+      errors,
+      message: "Data kasbon belum valid.",
+    };
+  }
+
+  const data: UpdateDebtInput = {};
+
+  if (Object.prototype.hasOwnProperty.call(value, "type")) {
+    if (value.type !== "owed_to_me" && value.type !== "i_owe") {
+      errors.type = "Pilih tipe hutang.";
+    } else {
+      data.type = value.type;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, "counterpart_name")) {
+    if (
+      typeof value.counterpart_name !== "string" ||
+      !value.counterpart_name.trim()
+    ) {
+      errors.counterpart_name = "Nama orang wajib diisi.";
+    } else {
+      data.counterpart_name = value.counterpart_name.trim();
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, "amount")) {
+    if (typeof value.amount !== "string" || !/^\d+$/.test(value.amount)) {
+      errors.amount = "Nominal harus berupa angka Rupiah bulat.";
+    } else {
+      try {
+        const amountValue = BigInt(value.amount);
+        if (amountValue <= BigInt(0)) {
+          errors.amount = "Nominal harus lebih besar dari nol.";
+        } else if (amountValue > MAX_BIGINT) {
+          errors.amount = "Nominal melebihi batas yang bisa disimpan.";
+        } else {
+          data.amount = amountValue.toString();
+        }
+      } catch {
+        errors.amount = "Nominal harus berupa angka Rupiah bulat.";
+      }
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, "due_date")) {
+    if (typeof value.due_date !== "string" || !isValidDate(value.due_date)) {
+      errors.due_date = "Tanggal belum valid.";
+    } else {
+      data.due_date = value.due_date;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, "note")) {
+    if (value.note !== null && typeof value.note !== "string") {
+      errors.note = "Catatan belum valid.";
+    } else if (typeof value.note === "string" && value.note.length > 200) {
+      errors.note = "Catatan maksimal 200 karakter.";
+    } else {
+      data.note =
+        typeof value.note === "string" && value.note.trim()
+          ? value.note.trim()
+          : null;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, "settled")) {
+    if (typeof value.settled !== "boolean") {
+      errors.settled = "Status lunas belum valid.";
+    } else {
+      data.settled = value.settled;
+    }
+  }
+
+  if (Object.keys(errors).length > 0 || Object.keys(data).length === 0) {
+    return {
+      success: false,
+      errors,
+      message: "Data kasbon belum valid.",
+    };
+  }
+
+  return { success: true, data };
 }

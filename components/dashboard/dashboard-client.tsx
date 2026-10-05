@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { CreateDebtForm } from "@/components/dashboard/create-debt-form";
+import { DebtForm } from "@/components/dashboard/debt-form";
 import { formatDebtDate, formatRupiah } from "@/lib/debts/format";
 import type {
   ApiErrorResponse,
@@ -101,6 +101,37 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
   const [retry, setRetry] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<DebtDTO | null>(null);
+  const [mutatingId, setMutatingId] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  async function toggleSettled(debt: DebtDTO) {
+    setMutatingId(debt.id);
+    setMutationError(null);
+
+    try {
+      const response = await fetch(`/api/debts/${debt.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settled: debt.settled_at === null }),
+      });
+      const payload: unknown = await response.json();
+
+      if (!response.ok) {
+        throw new Error(readApiError(payload));
+      }
+
+      setRefresh((current) => current + 1);
+    } catch (error) {
+      setMutationError(
+        error instanceof Error
+          ? error.message
+          : "Status kasbon belum bisa diperbarui. Coba lagi sebentar.",
+      );
+    } finally {
+      setMutatingId(null);
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -177,10 +208,23 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
       </div>
 
       {isCreateOpen && (
-        <CreateDebtForm
+        <DebtForm
+          mode="create"
           onClose={() => setIsCreateOpen(false)}
           onSuccess={() => {
             setIsCreateOpen(false);
+            setRefresh((current) => current + 1);
+          }}
+        />
+      )}
+
+      {editingDebt && (
+        <DebtForm
+          mode="edit"
+          debt={editingDebt}
+          onClose={() => setEditingDebt(null)}
+          onSuccess={() => {
+            setEditingDebt(null);
             setRefresh((current) => current + 1);
           }}
         />
@@ -240,6 +284,12 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         </div>
       )}
 
+      {mutationError && (
+        <p role="alert" className="rounded-2xl border-2 border-forest bg-leaf p-4 font-semibold">
+          {mutationError}
+        </p>
+      )}
+
       {loading && (
         <p role="status" className="rounded-2xl border-2 border-leaf p-6">
           Lagi memuat catatan kasbon...
@@ -289,6 +339,28 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                 <span className="font-semibold">{statusLabel(debt)}</span>
               </div>
               {debt.note && <p className="mt-3">{debt.note}</p>}
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingDebt(debt)}
+                  disabled={mutatingId === debt.id}
+                  className="min-h-11 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void toggleSettled(debt)}
+                  disabled={mutatingId === debt.id}
+                  className="min-h-11 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait"
+                >
+                  {mutatingId === debt.id
+                    ? "Menyimpan..."
+                    : debt.settled_at === null
+                      ? "Tandai lunas"
+                      : "Batalkan lunas"}
+                </button>
+              </div>
             </article>
           ))}
         </div>

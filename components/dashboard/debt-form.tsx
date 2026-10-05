@@ -2,19 +2,24 @@
 
 import { useState, type FormEvent } from "react";
 
-import { validateCreateDebtInput } from "@/lib/debts/validation";
+import { validateCreateDebtInput, validateUpdateDebtInput } from "@/lib/debts/validation";
 import type {
   ApiErrorResponse,
   CreateDebtFieldErrors,
   CreateDebtInput,
+  DebtDTO,
+  UpdateDebtFieldErrors,
 } from "@/lib/debts/types";
 
-type CreateDebtFormProps = {
+type DebtFormProps = {
+  mode: "create" | "edit";
+  debt?: DebtDTO;
   onClose: () => void;
   onSuccess: () => void;
 };
 
 type FormValues = CreateDebtInput;
+type FormErrors = CreateDebtFieldErrors & UpdateDebtFieldErrors;
 
 function getLocalDate(): string {
   const date = new Date();
@@ -24,33 +29,38 @@ function getLocalDate(): string {
   return `${year}-${month}-${day}`;
 }
 
-function readApiError(value: unknown): string {
+function readApiError(value: unknown): {
+  message: string;
+  fields?: FormErrors;
+} {
   if (
     typeof value === "object" &&
     value !== null &&
     "error" in value &&
     typeof (value as ApiErrorResponse).error === "string"
   ) {
-    return (value as ApiErrorResponse).error;
+    const fields =
+      "fields" in value && typeof value.fields === "object" && value.fields !== null
+        ? (value.fields as FormErrors)
+        : undefined;
+    return { message: (value as ApiErrorResponse).error, fields };
   }
 
-  return "Catatan kasbon belum bisa disimpan. Coba lagi sebentar.";
+  return { message: "Catatan kasbon belum bisa disimpan. Coba lagi sebentar." };
 }
 
-export function CreateDebtForm({
-  onClose,
-  onSuccess,
-}: CreateDebtFormProps) {
+export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
   const [values, setValues] = useState<FormValues>(() => ({
-    type: "owed_to_me",
-    counterpart_name: "",
-    amount: "",
-    due_date: getLocalDate(),
-    note: "",
+    type: debt?.type ?? "owed_to_me",
+    counterpart_name: debt?.counterpart_name ?? "",
+    amount: debt?.amount ?? "",
+    due_date: debt?.due_date ?? getLocalDate(),
+    note: debt?.note ?? "",
   }));
-  const [fieldErrors, setFieldErrors] = useState<CreateDebtFieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const isEdit = mode === "edit";
 
   function updateValue<Key extends keyof FormValues>(
     key: Key,
@@ -65,7 +75,10 @@ export function CreateDebtForm({
     event.preventDefault();
     setFormError(null);
 
-    const validation = validateCreateDebtInput(values);
+    const validation = isEdit
+      ? validateUpdateDebtInput(values)
+      : validateCreateDebtInput(values);
+
     if (!validation.success) {
       setFieldErrors(validation.errors);
       return;
@@ -75,15 +88,20 @@ export function CreateDebtForm({
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/debts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validation.data),
-      });
+      const response = await fetch(
+        isEdit ? `/api/debts/${debt?.id ?? ""}` : "/api/debts",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validation.data),
+        },
+      );
       const payload: unknown = await response.json();
 
       if (!response.ok) {
-        throw new Error(readApiError(payload));
+        const apiError = readApiError(payload);
+        setFieldErrors(apiError.fields ?? {});
+        throw new Error(apiError.message);
       }
 
       onSuccess();
@@ -103,16 +121,16 @@ export function CreateDebtForm({
       <section
         role="dialog"
         aria-modal="true"
-        aria-labelledby="create-debt-title"
+        aria-labelledby="debt-form-title"
         className="my-4 w-full max-w-xl rounded-3xl border-2 border-leaf bg-mist p-6 text-forest sm:p-8"
       >
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em]">
-              Catatan baru
+              {isEdit ? "Edit catatan" : "Catatan baru"}
             </p>
-            <h2 id="create-debt-title" className="mt-2 text-2xl font-bold">
-              Tambah kasbon
+            <h2 id="debt-form-title" className="mt-2 text-2xl font-bold">
+              {isEdit ? "Perbarui kasbon" : "Tambah kasbon"}
             </h2>
           </div>
           <button
@@ -154,40 +172,23 @@ export function CreateDebtForm({
             {fieldErrors.type && <FieldError message={fieldErrors.type} />}
           </fieldset>
 
-          <FormField
-            id="counterpart_name"
-            label="Nama orang"
-            error={fieldErrors.counterpart_name}
-          >
+          <FormField id="counterpart_name" label="Nama orang" error={fieldErrors.counterpart_name}>
             <input
               id="counterpart_name"
-              name="counterpart_name"
               value={values.counterpart_name}
-              onChange={(event) =>
-                updateValue("counterpart_name", event.target.value)
-              }
+              onChange={(event) => updateValue("counterpart_name", event.target.value)}
               autoComplete="name"
               className={inputClassName}
             />
           </FormField>
 
-          <FormField
-            id="amount"
-            label="Nominal (Rupiah)"
-            error={fieldErrors.amount}
-          >
+          <FormField id="amount" label="Nominal (Rupiah)" error={fieldErrors.amount}>
             <input
               id="amount"
-              name="amount"
               type="text"
               inputMode="numeric"
               value={values.amount}
-              onChange={(event) =>
-                updateValue(
-                  "amount",
-                  event.target.value.replace(/\D/g, ""),
-                )
-              }
+              onChange={(event) => updateValue("amount", event.target.value.replace(/\D/g, ""))}
               className={inputClassName}
             />
           </FormField>
@@ -195,7 +196,6 @@ export function CreateDebtForm({
           <FormField id="due_date" label="Tanggal" error={fieldErrors.due_date}>
             <input
               id="due_date"
-              name="due_date"
               type="date"
               value={values.due_date}
               onChange={(event) => updateValue("due_date", event.target.value)}
@@ -206,15 +206,12 @@ export function CreateDebtForm({
           <FormField id="note" label="Catatan (opsional)" error={fieldErrors.note}>
             <textarea
               id="note"
-              name="note"
               value={values.note ?? ""}
               maxLength={200}
               onChange={(event) => updateValue("note", event.target.value)}
               className={`${inputClassName} min-h-24 py-3`}
             />
-            <span className="text-right text-sm">
-              {(values.note ?? "").length}/200
-            </span>
+            <span className="text-right text-sm">{(values.note ?? "").length}/200</span>
           </FormField>
 
           {formError && (
@@ -228,7 +225,7 @@ export function CreateDebtForm({
             disabled={submitting}
             className="min-h-12 rounded-xl bg-sage px-5 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait"
           >
-            {submitting ? "Menyimpan..." : "Simpan catatan"}
+            {submitting ? "Menyimpan..." : isEdit ? "Simpan perubahan" : "Simpan catatan"}
           </button>
         </form>
       </section>
