@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowDownLeft, ArrowUpRight, Save, X } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { ArrowDownLeft, ArrowUpRight, CalendarDays, Save, X } from "lucide-react";
+import { useRef, useState, type FormEvent } from "react";
 
 import { Modal } from "@/components/ui/modal";
 import {
@@ -58,6 +58,7 @@ function readApiError(value: unknown): {
 }
 
 export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
+  const datePickerRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState<FormValues>(() => ({
     type: debt?.type ?? "owed_to_me",
     counterpart_name: debt?.counterpart_name ?? "",
@@ -226,20 +227,48 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
           </FormField>
 
           <FormField id="due_date" label="Tanggal" error={fieldErrors.due_date}>
-            <input
-              id="due_date"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="dd/mm/yyyy"
-              value={dateInput}
-              onChange={(event) => {
-                setDateInput(formatDateInputTyping(event.target.value));
-                setFieldErrors((current) => ({ ...current, due_date: undefined }));
-                setFormError(null);
-              }}
-              className={inputClassName}
-            />
+            <div className="flex min-h-12 items-center rounded-xl border-2 border-cashmere bg-linen focus-within:border-woody focus-within:outline-2 focus-within:outline-woody">
+              <input
+                id="due_date"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="dd/mm/yyyy"
+                value={dateInput}
+                onChange={(event) => {
+                  setDateInput(formatDateInputTyping(event.target.value));
+                  setFieldErrors((current) => ({ ...current, due_date: undefined }));
+                  setFormError(null);
+                }}
+                className="min-h-11 min-w-0 flex-1 bg-linen px-4 text-woody outline-none"
+              />
+              <button
+                type="button"
+                aria-label="Buka kalender"
+                onClick={() => {
+                  const picker = datePickerRef.current;
+                  if (!picker) return;
+                  if (typeof picker.showPicker === "function") picker.showPicker();
+                  else picker.click();
+                }}
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus:outline-2 focus:outline-woody"
+              >
+                <CalendarDays aria-hidden="true" size={19} />
+              </button>
+              <input
+                ref={datePickerRef}
+                type="date"
+                tabIndex={-1}
+                aria-hidden="true"
+                value={parseDateInput(dateInput) ?? ""}
+                onChange={(event) => {
+                  setDateInput(formatDateInput(event.target.value));
+                  setFieldErrors((current) => ({ ...current, due_date: undefined }));
+                  setFormError(null);
+                }}
+                className="sr-only"
+              />
+            </div>
           </FormField>
 
           <FormField id="note" label="Catatan (opsional)" error={fieldErrors.note}>
@@ -296,10 +325,10 @@ function FormField({
   children: React.ReactNode;
 }) {
   return (
-    <label htmlFor={id} className="flex flex-col gap-2 font-semibold">
-      {label}
+    <div className="flex flex-col gap-2 font-semibold">
+      <label htmlFor={id}>{label}</label>
       {children}
       {error && <FieldError message={error} />}
-    </label>
+    </div>
   );
 }
