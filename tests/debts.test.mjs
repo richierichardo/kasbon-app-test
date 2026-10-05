@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseStatusFilter, parseTypeFilter } from "../lib/debts/filters.ts";
+import {
+  escapeIlikePattern,
+  parseDebtSort,
+  parseSearchQuery,
+  parseStatusFilter,
+  parseTypeFilter,
+} from "../lib/debts/filters.ts";
+import {
+  getComparisonBarWidths,
+  groupDebtsByCounterpart,
+} from "../lib/debts/dashboard.ts";
 import {
   formatDateInput,
   formatDateInputTyping,
@@ -142,6 +152,68 @@ test("filter parsers accept supported values and reject invalid values", () => {
   assert.equal(parseTypeFilter("i_owe"), "i_owe");
   assert.throws(() => parseStatusFilter("paid"), /tidak valid/);
   assert.throws(() => parseTypeFilter("other"), /tidak valid/);
+  assert.equal(parseDebtSort(null), "newest");
+  assert.equal(parseDebtSort("amount_desc"), "amount_desc");
+  assert.throws(() => parseDebtSort("name"), /tidak valid/);
+  assert.equal(parseSearchQuery("  Budi  "), "Budi");
+  assert.equal(parseSearchQuery(null), "");
+  assert.throws(() => parseSearchQuery("x".repeat(101)), /100 karakter/);
+  assert.equal(escapeIlikePattern("50%_A\\B"), "50\\%\\_A\\\\B");
+});
+
+test("grouping merges normalized names and keeps BigInt totals", () => {
+  const baseDebt = {
+    id: "00000000-0000-4000-8000-000000000001",
+    user_id: "00000000-0000-4000-8000-000000000002",
+    type: "owed_to_me",
+    counterpart_name: " Budi  Santoso ",
+    amount: "9007199254740993",
+    note: null,
+    due_date: "2026-10-05",
+    settled_at: null,
+    created_at: "2026-10-05T00:00:00.000Z",
+    updated_at: "2026-10-05T00:00:00.000Z",
+  };
+  const groups = groupDebtsByCounterpart([
+    baseDebt,
+    {
+      ...baseDebt,
+      id: "00000000-0000-4000-8000-000000000003",
+      counterpart_name: "budi santoso",
+      type: "i_owe",
+      amount: "7",
+      settled_at: "2026-10-06T00:00:00.000Z",
+    },
+    {
+      ...baseDebt,
+      id: "00000000-0000-4000-8000-000000000004",
+      counterpart_name: "Ani",
+      amount: "10",
+    },
+  ]);
+
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].counterpartName, "Ani");
+  assert.equal(groups[1].counterpartName, "Budi Santoso");
+  assert.equal(groups[1].debts.length, 2);
+  assert.equal(groups[1].unsettledCount, 1);
+  assert.equal(groups[1].owedToMe, "9007199254740993");
+  assert.equal(groups[1].iOwe, "7");
+});
+
+test("chart widths use bounded BigInt ratios", () => {
+  assert.deepEqual(
+    getComparisonBarWidths({ owed_to_me: "0", i_owe: "0", net: "0" }),
+    { owedToMe: 0, iOwe: 0 },
+  );
+  assert.deepEqual(
+    getComparisonBarWidths({
+      owed_to_me: "9007199254740993",
+      i_owe: "4503599627370496",
+      net: "4503599627370497",
+    }),
+    { owedToMe: 100, iOwe: 49.99 },
+  );
 });
 
 test("Rupiah formatting preserves integers above Number.MAX_SAFE_INTEGER", () => {

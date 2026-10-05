@@ -2,6 +2,12 @@ import type { DebtType } from "@/lib/supabase/database.types";
 
 export type DebtStatusFilter = "all" | "unsettled" | "settled";
 export type DebtTypeFilter = "all" | DebtType;
+export type DebtSort =
+  | "newest"
+  | "amount_desc"
+  | "amount_asc"
+  | "due_asc"
+  | "due_desc";
 
 export type CreateDebtInput = {
   type: DebtType;

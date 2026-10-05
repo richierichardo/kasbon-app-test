@@ -200,6 +200,8 @@ async function run() {
     for (const path of [
       "/api/debts?status=paid&type=all",
       "/api/debts?status=all&type=other",
+      "/api/debts?sort=name",
+      `/api/debts?q=${"x".repeat(101)}`,
     ]) {
       expectStatus(await appRequest(path, { cookie: cookieA }), 400, "Filter invalid");
     }
@@ -273,6 +275,7 @@ async function run() {
       type: "i_owe",
       counterpart_name: `${fixtureMarker}-i-owe`,
       amount: "3",
+      due_date: "2026-10-06",
     });
     fixtureIds.a.add(debtAOwed.id);
     const debtB = await createDebt(cookieB, ownerB, {
@@ -315,6 +318,60 @@ async function run() {
       "Filter list mengubah summary global.",
     );
     pass("create, list, filter, dan kalkulasi BigInt benar");
+
+    const searchedDescending = await appRequest(
+      `/api/debts?status=all&type=all&q=${encodeURIComponent(fixtureMarker)}&sort=amount_desc`,
+      { cookie: cookieA },
+    );
+    expectStatus(searchedDescending, 200, "Search dan sort amount desc");
+    ensure(searchedDescending.payload.data.length === 2, "Search nama tidak presisi.");
+    ensure(
+      searchedDescending.payload.data.every(
+        (row) =>
+          row.user_id === ownerA.user.id &&
+          row.counterpart_name.toLowerCase().includes(fixtureMarker),
+      ),
+      "Search nama membocorkan atau mengembalikan row yang tidak cocok.",
+    );
+    ensure(
+      searchedDescending.payload.data[0].id === debtA.id,
+      "Sort nominal terbesar gagal.",
+    );
+    ensure(
+      searchedDescending.payload.summary.net ===
+        (expectedOwed - expectedIOwe).toString(),
+      "Search atau sort mengubah summary global.",
+    );
+
+    const searchedAscending = await appRequest(
+      `/api/debts?q=${encodeURIComponent(fixtureMarker)}&sort=amount_asc`,
+      { cookie: cookieA },
+    );
+    ensure(
+      searchedAscending.payload.data[0].id === debtAOwed.id,
+      "Sort nominal terkecil gagal.",
+    );
+
+    const dueDescending = await appRequest(
+      `/api/debts?q=${encodeURIComponent(fixtureMarker)}&sort=due_desc`,
+      { cookie: cookieA },
+    );
+    ensure(
+      dueDescending.payload.data[0].id === debtAOwed.id,
+      "Sort tanggal terjauh gagal.",
+    );
+
+    const combined = await appRequest(
+      `/api/debts?status=unsettled&type=i_owe&q=${encodeURIComponent(fixtureMarker)}&sort=due_asc`,
+      { cookie: cookieA },
+    );
+    expectStatus(combined, 200, "Kombinasi search/filter/sort");
+    ensure(
+      combined.payload.data.length === 1 &&
+        combined.payload.data[0].id === debtAOwed.id,
+      "Kombinasi search, filter, dan sort gagal.",
+    );
+    pass("search, sorting nominal/tanggal, dan kombinasi filter benar");
 
     const edited = await appRequest(`/api/debts/${debtAOwed.id}`, {
       method: "PATCH",

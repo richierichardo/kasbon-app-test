@@ -1,34 +1,41 @@
 "use client";
 
 import {
-  CalendarDays,
   CheckCircle2,
   CircleDollarSign,
-  Pencil,
+  List,
   Plus,
   RefreshCcw,
   RotateCcw,
-  Trash2,
-  Undo2,
+  Search,
+  Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DebtForm } from "@/components/dashboard/debt-form";
 import { DeleteDebtDialog } from "@/components/dashboard/delete-debt-dialog";
+import { DebtComparisonChart } from "@/components/dashboard/debt-comparison-chart";
 import {
-  formatDebtDate,
-  formatDebtDateAbsolute,
-  formatRupiah,
-} from "@/lib/debts/format";
+  DebtEntryList,
+  DebtGroupedList,
+} from "@/components/dashboard/debt-list";
+import {
+  getComparisonBarWidths,
+  groupDebtsByCounterpart,
+} from "@/lib/debts/dashboard";
+import { formatRupiah } from "@/lib/debts/format";
 import type {
   ApiErrorResponse,
   DebtDTO,
   DebtListResponse,
+  DebtSort,
   DebtStatusFilter,
   DebtSummary,
   DebtTypeFilter,
 } from "@/lib/debts/types";
+
+type ViewMode = "entries" | "people";
 
 type DashboardClientProps = {
   userEmail: string;
@@ -37,7 +44,6 @@ type DashboardClientProps = {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
-
 function isString(value: unknown): value is string {
   return typeof value === "string";
 }
@@ -108,17 +114,14 @@ function formatNet(amount: string): { value: string; detail: string } {
   };
 }
 
-function typeLabel(type: DebtDTO["type"]): string {
-  return type === "owed_to_me" ? "Dihutang ke saya" : "Saya hutang";
-}
-
-function statusLabel(debt: DebtDTO): string {
-  return debt.settled_at === null ? "Belum lunas" : "Lunas";
-}
-
 export function DashboardClient({ userEmail }: DashboardClientProps) {
   const [status, setStatus] = useState<DebtStatusFilter>("all");
   const [type, setType] = useState<DebtTypeFilter>("all");
+  const [sort, setSort] = useState<DebtSort>("newest");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("entries");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [result, setResult] = useState<DebtListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,6 +135,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
     kind: "success" | "error";
     message: string;
   } | null>(null);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
 
   async function toggleSettled(debt: DebtDTO) {
     setMutatingId(debt.id);
@@ -177,7 +188,8 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams({ status, type });
+      const params = new URLSearchParams({ status, type, sort });
+      if (searchQuery) params.set("q", searchQuery);
 
       try {
         const response = await fetch(`/api/debts?${params.toString()}`, {
@@ -211,7 +223,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
     void loadDebts();
 
     return () => controller.abort();
-  }, [refresh, retry, status, type]);
+  }, [refresh, retry, searchQuery, sort, status, type]);
 
   const summary = result?.summary ?? {
     owed_to_me: "0",
@@ -219,6 +231,22 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
     net: "0",
   };
   const net = formatNet(summary.net);
+  const chartWidths = getComparisonBarWidths(summary);
+  const groups = useMemo(
+    () => groupDebtsByCounterpart(result?.data ?? []),
+    [result?.data],
+  );
+  const hasActiveFilters =
+    status !== "all" || type !== "all" || searchQuery !== "";
+
+  function resetListControls() {
+    setStatus("all");
+    setType("all");
+    setSort("newest");
+    setSearchInput("");
+    setSearchQuery("");
+    setFeedback(null);
+  }
 
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-8 sm:py-12">
@@ -307,7 +335,40 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         />
       </div>
 
-      <div className="grid gap-4 rounded-2xl border-2 border-cashmere bg-linen p-4 sm:grid-cols-2">
+      <DebtComparisonChart summary={summary} widths={chartWidths} />
+
+      <div className="grid gap-4 rounded-2xl border-2 border-cashmere bg-linen p-4 md:grid-cols-4">
+        <label className="flex flex-col gap-2 font-semibold md:col-span-2">
+          Cari nama orang
+          <span className="flex min-h-11 items-center rounded-xl border-2 border-cashmere bg-linen focus-within:border-toast focus-within:outline-2 focus-within:outline-woody">
+            <Search aria-hidden="true" className="ml-3 shrink-0" size={19} />
+            <input
+              type="search"
+              maxLength={100}
+              value={searchInput}
+              onChange={(event) => {
+                setSearchInput(event.target.value);
+                setFeedback(null);
+              }}
+              placeholder="Contoh: Budi"
+              className="min-h-10 min-w-0 flex-1 bg-linen px-3 font-normal text-woody outline-none"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput("");
+                  setSearchQuery("");
+                  setFeedback(null);
+                }}
+                aria-label="Hapus pencarian"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus:outline-2 focus:outline-woody"
+              >
+                <X aria-hidden="true" size={18} />
+              </button>
+            )}
+          </span>
+        </label>
         <label className="flex flex-col gap-2 font-semibold">
           Status
           <select
@@ -338,6 +399,42 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             <option value="i_owe">Saya hutang</option>
           </select>
         </label>
+        <label className="flex flex-col gap-2 font-semibold md:col-span-2">
+          Urutkan
+          <select
+            value={sort}
+            onChange={(event) => {
+              setSort(event.target.value as DebtSort);
+              setFeedback(null);
+            }}
+            className="min-h-11 rounded-xl border-2 border-cashmere bg-linen px-3 font-normal text-woody outline-none focus:border-toast"
+          >
+            <option value="newest">Terbaru dicatat</option>
+            <option value="amount_desc">Nominal terbesar</option>
+            <option value="amount_asc">Nominal terkecil</option>
+            <option value="due_asc">Tanggal terdekat</option>
+            <option value="due_desc">Tanggal terjauh</option>
+          </select>
+        </label>
+        <fieldset className="flex flex-col gap-2 md:col-span-2">
+          <legend className="font-semibold">Tampilan</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <ViewModeButton
+              active={viewMode === "entries"}
+              onClick={() => setViewMode("entries")}
+              icon={<List aria-hidden="true" size={18} />}
+            >
+              Per catatan
+            </ViewModeButton>
+            <ViewModeButton
+              active={viewMode === "people"}
+              onClick={() => setViewMode("people")}
+              icon={<Users aria-hidden="true" size={18} />}
+            >
+              Per orang
+            </ViewModeButton>
+          </div>
+        </fieldset>
       </div>
 
       {error && (
@@ -391,16 +488,18 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
       {!loading && !error && result?.data.length === 0 && (
         <div className="rounded-2xl border-2 border-cashmere p-6">
           <h2 className="text-xl font-bold">
-            {status === "all" && type === "all"
-              ? "Belum ada catatan kasbon."
-              : "Tidak ada catatan yang cocok."}
+            {searchQuery
+              ? `Nama “${searchQuery}” belum ditemukan.`
+              : hasActiveFilters
+                ? "Tidak ada catatan yang cocok."
+                : "Belum ada catatan kasbon."}
           </h2>
           <p className="mt-2">
-            {status === "all" && type === "all"
-              ? "Belum ada catatan. Tambahkan kasbon pertamamu sekarang."
-              : "Coba ganti filter untuk melihat catatan lainnya."}
+            {hasActiveFilters
+              ? "Coba ubah pencarian, filter, atau urutan untuk melihat catatan lainnya."
+              : "Belum ada catatan. Tambahkan kasbon pertamamu sekarang."}
           </p>
-          {status === "all" && type === "all" && (
+          {!hasActiveFilters && (
             <button
               type="button"
               onClick={() => {
@@ -413,14 +512,10 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
               Catat baru
             </button>
           )}
-          {(status !== "all" || type !== "all") && (
+          {hasActiveFilters && (
             <button
               type="button"
-              onClick={() => {
-                setStatus("all");
-                setType("all");
-                setFeedback(null);
-              }}
+              onClick={resetListControls}
               className="mt-4 flex min-h-11 items-center gap-2 rounded-xl border-2 border-cashmere px-4 font-bold focus:outline-2 focus:outline-woody"
             >
               <RotateCcw aria-hidden="true" size={18} />
@@ -430,80 +525,76 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         </div>
       )}
 
-      {!loading && !error && result && result.data.length > 0 && (
-        <div className="flex flex-col gap-4">
-          {result.data.map((debt) => (
-            <article
-              key={debt.id}
-              className="rounded-2xl border-2 border-cashmere bg-linen p-5"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-xl font-bold">{debt.counterpart_name}</h2>
-                  <p>{typeLabel(debt.type)}</p>
-                </div>
-                <p className="text-xl font-bold">{formatRupiah(debt.amount)}</p>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-                <span className="flex items-center gap-2" title={formatDebtDateAbsolute(debt.due_date, debt.created_at)}>
-                  <CalendarDays aria-hidden="true" size={17} />
-                  {formatDebtDate(debt.due_date, debt.created_at)} · {formatDebtDateAbsolute(debt.due_date, debt.created_at)}
-                </span>
-                <span className="flex items-center gap-2 font-semibold">
-                  <CheckCircle2 aria-hidden="true" size={17} />
-                  {statusLabel(debt)}
-                </span>
-              </div>
-              {debt.note && <p className="mt-3">{debt.note}</p>}
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFeedback(null);
-                    setEditingDebt(debt);
-                  }}
-                  disabled={mutatingId === debt.id}
-                  className="flex min-h-11 items-center gap-2 rounded-xl border-2 border-cashmere px-4 font-bold focus:outline-2 focus:outline-woody disabled:cursor-not-allowed disabled:bg-cashmere"
-                >
-                  <Pencil aria-hidden="true" size={18} />
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void toggleSettled(debt)}
-                  disabled={mutatingId === debt.id}
-                  aria-busy={mutatingId === debt.id}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-toast px-4 font-bold focus:outline-2 focus:outline-woody disabled:cursor-wait disabled:bg-cashmere"
-                >
-                  {debt.settled_at === null ? (
-                    <CheckCircle2 aria-hidden="true" size={18} />
-                  ) : (
-                    <Undo2 aria-hidden="true" size={18} />
-                  )}
-                  {mutatingId === debt.id
-                    ? "Menyimpan..."
-                    : debt.settled_at === null
-                      ? "Tandai lunas"
-                      : "Batalkan lunas"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFeedback(null);
-                    setDeletingDebt(debt);
-                  }}
-                  disabled={mutatingId === debt.id}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-ferra px-4 font-bold text-linen focus:outline-2 focus:outline-toast disabled:cursor-not-allowed disabled:bg-cashmere disabled:text-woody"
-                >
-                  <Trash2 aria-hidden="true" size={18} />
-                  Hapus
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+      {!loading &&
+        !error &&
+        result &&
+        result.data.length > 0 &&
+        viewMode === "entries" && (
+          <DebtEntryList
+            debts={result.data}
+            mutatingId={mutatingId}
+            onEdit={(debt) => {
+              setFeedback(null);
+              setEditingDebt(debt);
+            }}
+            onToggleSettled={(debt) => void toggleSettled(debt)}
+            onDelete={(debt) => {
+              setFeedback(null);
+              setDeletingDebt(debt);
+            }}
+          />
+        )}
+
+      {!loading &&
+        !error &&
+        result &&
+        result.data.length > 0 &&
+        viewMode === "people" && (
+          <DebtGroupedList
+            groups={groups}
+            expandedGroup={expandedGroup}
+            onToggleGroup={(key) =>
+              setExpandedGroup((current) =>
+                current === key ? null : key,
+              )
+            }
+            mutatingId={mutatingId}
+            onEdit={(debt) => {
+              setFeedback(null);
+              setEditingDebt(debt);
+            }}
+            onToggleSettled={(debt) => void toggleSettled(debt)}
+            onDelete={(debt) => {
+              setFeedback(null);
+              setDeletingDebt(debt);
+            }}
+          />
+        )}
     </section>
+  );
+}
+
+function ViewModeButton({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 px-3 font-bold focus:outline-2 focus:outline-woody ${active ? "border-woody bg-cashmere" : "border-cashmere bg-linen"}`}
+    >
+      {icon}
+      {children}
+    </button>
   );
 }
 
@@ -521,7 +612,9 @@ function SummaryCard({
   className?: string;
 }) {
   return (
-    <article className={`min-w-0 rounded-2xl border-2 border-cashmere bg-cashmere p-4 sm:p-5 ${className}`}>
+    <article
+      className={`min-w-0 rounded-2xl border-2 border-cashmere bg-cashmere p-4 sm:p-5 ${className}`}
+    >
       <p className="font-semibold">{label}</p>
       <p className="mt-3 break-words text-xl font-bold tabular-nums sm:text-2xl">
         {isFormatted ? amount : formatRupiah(amount)}

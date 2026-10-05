@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 
-import { parseStatusFilter, parseTypeFilter } from "@/lib/debts/filters";
+import {
+  escapeIlikePattern,
+  parseDebtSort,
+  parseSearchQuery,
+  parseStatusFilter,
+  parseTypeFilter,
+} from "@/lib/debts/filters";
 import { buildDebtSummary } from "@/lib/debts/summary";
 import type {
   CreateDebtInput,
   DebtDTO,
   DebtListResponse,
+  DebtSort,
   DebtStatusFilter,
   DebtTypeFilter,
 } from "@/lib/debts/types";
@@ -50,10 +57,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   let status: DebtStatusFilter;
   let type: DebtTypeFilter;
+  let sort: DebtSort;
+  let search: string;
 
   try {
     status = parseStatusFilter(url.searchParams.get("status"));
     type = parseTypeFilter(url.searchParams.get("type"));
+    sort = parseDebtSort(url.searchParams.get("sort"));
+    search = parseSearchQuery(url.searchParams.get("q"));
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Filter tidak valid." },
@@ -66,8 +77,7 @@ export async function GET(request: Request) {
     .select("type,amount_text,settled_at");
   const listQuery = supabase
     .from("debts")
-    .select(debtSelect)
-    .order("created_at", { ascending: false });
+    .select(debtSelect);
 
   if (status === "unsettled") {
     listQuery.is("settled_at", null);
@@ -77,6 +87,26 @@ export async function GET(request: Request) {
 
   if (type !== "all") {
     listQuery.eq("type", type);
+  }
+
+  if (search) {
+    listQuery.ilike(
+      "counterpart_name",
+      `%${escapeIlikePattern(search)}%`,
+    );
+  }
+
+  if (sort === "amount_desc" || sort === "amount_asc") {
+    listQuery.order("amount", { ascending: sort === "amount_asc" });
+    listQuery.order("created_at", { ascending: false });
+  } else if (sort === "due_asc" || sort === "due_desc") {
+    listQuery.order("due_date", {
+      ascending: sort === "due_asc",
+      nullsFirst: false,
+    });
+    listQuery.order("created_at", { ascending: false });
+  } else {
+    listQuery.order("created_at", { ascending: false });
   }
 
   const [summaryResult, listResult] = await Promise.all([
