@@ -8,6 +8,30 @@ export function formatRupiah(amount: string): string {
   return rupiahFormatter.format(BigInt(amount));
 }
 
+export function formatRupiahInput(amount: string): string {
+  if (!amount) return "";
+  return BigInt(amount).toLocaleString("id-ID");
+}
+
+export function formatDateInput(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+}
+
+export function formatDateInputTyping(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+  return [day, month, year].filter(Boolean).join("/");
+}
+
+export function parseDateInput(value: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+  return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
 export function formatDebtDate(
   dueDate: string | null,
   createdAt: string,
@@ -38,9 +62,11 @@ export function formatDebtDateAbsolute(
   dueDate: string | null,
   createdAt: string,
 ): string {
-  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(
-    getDebtDate(dueDate, createdAt),
-  );
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(getDebtDate(dueDate, createdAt));
 }
 
 function getDebtDate(dueDate: string | null, createdAt: string): Date {

@@ -241,7 +241,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
               setFeedback(null);
               setIsCreateOpen(true);
             }}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-toast px-4 font-bold focus:outline-2 focus:outline-woody"
           >
             <Plus aria-hidden="true" size={19} />
             Catat baru
@@ -307,7 +307,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         />
       </div>
 
-      <div className="grid gap-4 rounded-2xl border-2 border-leaf bg-mist p-4 sm:grid-cols-2">
+      <div className="grid gap-4 rounded-2xl border-2 border-cashmere bg-linen p-4 sm:grid-cols-2">
         <label className="flex flex-col gap-2 font-semibold">
           Status
           <select
@@ -316,7 +316,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
               setStatus(event.target.value as DebtStatusFilter);
               setFeedback(null);
             }}
-            className="min-h-11 rounded-xl border-2 border-leaf bg-mist px-3 font-normal text-forest outline-none focus:border-sage"
+            className="min-h-11 rounded-xl border-2 border-cashmere bg-linen px-3 font-normal text-woody outline-none focus:border-toast"
           >
             <option value="all">Semua status</option>
             <option value="unsettled">Belum lunas</option>
@@ -331,7 +331,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
               setType(event.target.value as DebtTypeFilter);
               setFeedback(null);
             }}
-            className="min-h-11 rounded-xl border-2 border-leaf bg-mist px-3 font-normal text-forest outline-none focus:border-sage"
+            className="min-h-11 rounded-xl border-2 border-cashmere bg-linen px-3 font-normal text-woody outline-none focus:border-toast"
           >
             <option value="all">Semua tipe</option>
             <option value="owed_to_me">Dihutang ke saya</option>
@@ -341,14 +341,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
       </div>
 
       {error && (
-        <div className="flex flex-col gap-3 rounded-2xl border-2 border-forest bg-leaf p-4">
+        <div className="flex flex-col gap-3 rounded-2xl border-2 border-woody bg-cashmere p-4">
           <p role="alert" className="font-semibold">
             {error}
           </p>
           <button
             type="button"
             onClick={() => setRetry((current) => current + 1)}
-            className="flex min-h-11 w-fit items-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+            className="flex min-h-11 w-fit items-center gap-2 rounded-xl bg-toast px-4 font-bold focus:outline-2 focus:outline-woody"
           >
             <RefreshCcw aria-hidden="true" size={18} />
             Coba lagi
@@ -360,7 +360,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         <div
           role={feedback.kind === "error" ? "alert" : "status"}
           aria-live={feedback.kind === "error" ? "assertive" : "polite"}
-          className="flex items-start justify-between gap-4 rounded-2xl border-2 border-forest bg-leaf p-4 font-semibold"
+          className="flex items-start justify-between gap-4 rounded-2xl border-2 border-woody bg-cashmere p-4 font-semibold"
         >
           <div className="flex items-center gap-3">
             {feedback.kind === "success" ? (
@@ -374,7 +374,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
             type="button"
             onClick={() => setFeedback(null)}
             aria-label="Tutup pemberitahuan"
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-forest focus:outline-2 focus:outline-forest"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-woody focus:outline-2 focus:outline-woody"
           >
             <X aria-hidden="true" size={18} />
           </button>
@@ -382,14 +382,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
       )}
 
       {loading && (
-        <div role="status" className="flex items-center gap-3 rounded-2xl border-2 border-leaf p-6">
+        <div role="status" className="flex items-center gap-3 rounded-2xl border-2 border-cashmere p-6">
           <RefreshCcw aria-hidden="true" size={20} />
           <p>Lagi memuat catatan kasbon...</p>
         </div>
       )}
 
       {!loading && !error && result?.data.length === 0 && (
-        <div className="rounded-2xl border-2 border-leaf p-6">
+        <div className="rounded-2xl border-2 border-cashmere p-6">
           <h2 className="text-xl font-bold">
             {status === "all" && type === "all"
               ? "Belum ada catatan kasbon."
@@ -407,7 +407,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                 setFeedback(null);
                 setIsCreateOpen(true);
               }}
-              className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
+              className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-toast px-4 font-bold focus:outline-2 focus:outline-woody"
             >
               <Plus aria-hidden="true" size={19} />
               Catat baru
@@ -421,7 +421,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                 setType("all");
                 setFeedback(null);
               }}
-              className="mt-4 flex min-h-11 items-center gap-2 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest"
+              className="mt-4 flex min-h-11 items-center gap-2 rounded-xl border-2 border-cashmere px-4 font-bold focus:outline-2 focus:outline-woody"
             >
               <RotateCcw aria-hidden="true" size={18} />
               Reset filter
@@ -435,7 +435,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           {result.data.map((debt) => (
             <article
               key={debt.id}
-              className="rounded-2xl border-2 border-leaf bg-mist p-5"
+              className="rounded-2xl border-2 border-cashmere bg-linen p-5"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-col gap-1">
@@ -463,7 +463,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                     setEditingDebt(debt);
                   }}
                   disabled={mutatingId === debt.id}
-                  className="flex min-h-11 items-center gap-2 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed disabled:bg-leaf"
+                  className="flex min-h-11 items-center gap-2 rounded-xl border-2 border-cashmere px-4 font-bold focus:outline-2 focus:outline-woody disabled:cursor-not-allowed disabled:bg-cashmere"
                 >
                   <Pencil aria-hidden="true" size={18} />
                   Edit
@@ -473,7 +473,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                   onClick={() => void toggleSettled(debt)}
                   disabled={mutatingId === debt.id}
                   aria-busy={mutatingId === debt.id}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait disabled:bg-leaf"
+                  className="flex min-h-11 items-center gap-2 rounded-xl bg-toast px-4 font-bold focus:outline-2 focus:outline-woody disabled:cursor-wait disabled:bg-cashmere"
                 >
                   {debt.settled_at === null ? (
                     <CheckCircle2 aria-hidden="true" size={18} />
@@ -493,7 +493,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                     setDeletingDebt(debt);
                   }}
                   disabled={mutatingId === debt.id}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-forest px-4 font-bold text-mist focus:outline-2 focus:outline-sage disabled:cursor-not-allowed disabled:bg-leaf disabled:text-forest"
+                  className="flex min-h-11 items-center gap-2 rounded-xl bg-ferra px-4 font-bold text-linen focus:outline-2 focus:outline-toast disabled:cursor-not-allowed disabled:bg-cashmere disabled:text-woody"
                 >
                   <Trash2 aria-hidden="true" size={18} />
                   Hapus
@@ -521,7 +521,7 @@ function SummaryCard({
   className?: string;
 }) {
   return (
-    <article className={`min-w-0 rounded-2xl border-2 border-leaf bg-leaf p-4 sm:p-5 ${className}`}>
+    <article className={`min-w-0 rounded-2xl border-2 border-cashmere bg-cashmere p-4 sm:p-5 ${className}`}>
       <p className="font-semibold">{label}</p>
       <p className="mt-3 break-words text-xl font-bold tabular-nums sm:text-2xl">
         {isFormatted ? amount : formatRupiah(amount)}

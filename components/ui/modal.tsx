@@ -101,19 +101,21 @@ export function Modal({
 
   return (
     <div
-      className={`fixed inset-0 ${layer === "high" ? "z-20" : "z-10"} flex items-start justify-center overflow-y-auto bg-forest p-4 sm:items-center`}
+      className={`fixed inset-0 ${layer === "high" ? "z-20" : "z-10"} overflow-y-auto bg-ferra p-4 sm:p-6`}
     >
-      <section
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        aria-describedby={describedBy}
-        tabIndex={-1}
-        className={`my-4 w-full ${className} rounded-3xl border-2 border-leaf bg-mist p-6 text-forest outline-none sm:p-8`}
-      >
-        {children}
-      </section>
+      <div className="flex min-h-full items-center justify-center">
+        <section
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={labelledBy}
+          aria-describedby={describedBy}
+          tabIndex={-1}
+          className={`max-h-[calc(100dvh-2rem)] w-full overflow-y-auto ${className} rounded-3xl border-2 border-cashmere bg-linen p-6 text-woody outline-none sm:max-h-[calc(100dvh-3rem)] sm:p-8`}
+        >
+          {children}
+        </section>
+      </div>
     </div>
   );
 }

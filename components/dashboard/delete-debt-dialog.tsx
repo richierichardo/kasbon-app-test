@@ -114,7 +114,7 @@ export function DeleteDebtDialog({
           <p
             role="alert"
             aria-live="assertive"
-            className="mt-4 rounded-xl bg-leaf p-3 font-semibold"
+            className="mt-4 rounded-xl bg-cashmere p-3 font-semibold"
           >
             {error}
           </p>
@@ -125,7 +125,7 @@ export function DeleteDebtDialog({
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed disabled:bg-leaf"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-cashmere px-4 font-bold focus:outline-2 focus:outline-woody disabled:cursor-not-allowed disabled:bg-cashmere"
           >
             <X aria-hidden="true" size={18} />
             Batal
@@ -135,7 +135,7 @@ export function DeleteDebtDialog({
             onClick={() => void deleteDebt()}
             disabled={deleting}
             aria-busy={deleting}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-forest px-4 font-bold text-mist focus:outline-2 focus:outline-sage disabled:cursor-wait disabled:bg-leaf disabled:text-forest"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ferra px-4 font-bold text-linen focus:outline-2 focus:outline-toast disabled:cursor-wait disabled:bg-cashmere disabled:text-woody"
           >
             <Trash2 aria-hidden="true" size={18} />
             {deleting ? "Menghapus..." : "Ya, hapus"}

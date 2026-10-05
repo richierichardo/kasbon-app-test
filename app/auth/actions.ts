@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { createClient } from "@/lib/supabase/server";
@@ -68,7 +69,17 @@ export async function signUp(
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const requestHeaders = await headers();
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const requestOrigin = requestHeaders.get("origin")?.replace(/\/$/, "");
+  const siteUrl = configuredSiteUrl || requestOrigin;
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: siteUrl
+      ? { emailRedirectTo: `${siteUrl}/auth/confirm` }
+      : undefined,
+  });
 
   if (error) {
     return { error: getAuthErrorMessage(error), email };

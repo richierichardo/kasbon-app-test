@@ -4,6 +4,12 @@ import { ArrowDownLeft, ArrowUpRight, Save, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Modal } from "@/components/ui/modal";
+import {
+  formatDateInput,
+  formatDateInputTyping,
+  formatRupiahInput,
+  parseDateInput,
+} from "@/lib/debts/format";
 import { validateCreateDebtInput, validateUpdateDebtInput } from "@/lib/debts/validation";
 import type {
   ApiErrorResponse,
@@ -59,6 +65,9 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
     due_date: debt?.due_date ?? getLocalDate(),
     note: debt?.note ?? "",
   }));
+  const [dateInput, setDateInput] = useState(() =>
+    formatDateInput(debt?.due_date ?? getLocalDate()),
+  );
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -77,9 +86,15 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
     event.preventDefault();
     setFormError(null);
 
+    const normalizedDate = parseDateInput(dateInput);
+    const submittedValues: FormValues = {
+      ...values,
+      due_date: normalizedDate ?? dateInput,
+    };
+
     const validation = isEdit
-      ? validateUpdateDebtInput(values)
-      : validateCreateDebtInput(values);
+      ? validateUpdateDebtInput(submittedValues)
+      : validateCreateDebtInput(submittedValues);
 
     if (!validation.success) {
       setFieldErrors(validation.errors);
@@ -144,7 +159,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
             onClick={onClose}
             disabled={submitting}
             aria-label="Tutup form"
-            className="flex min-h-11 items-center gap-2 rounded-xl border-2 border-leaf px-3 font-bold focus:outline-2 focus:outline-forest disabled:cursor-not-allowed disabled:bg-leaf"
+            className="flex min-h-11 items-center gap-2 rounded-xl border-2 border-cashmere px-3 font-bold focus:outline-2 focus:outline-woody disabled:cursor-not-allowed disabled:bg-cashmere"
           >
             <X aria-hidden="true" size={18} />
             Tutup
@@ -155,7 +170,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 font-semibold">Tipe hutang</legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 p-3 focus-within:outline-2 focus-within:outline-forest ${values.type === "owed_to_me" ? "border-forest bg-leaf" : "border-leaf"}`}>
+              <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 p-3 focus-within:outline-2 focus-within:outline-woody ${values.type === "owed_to_me" ? "border-woody bg-cashmere" : "border-cashmere"}`}>
                 <input
                   type="radio"
                   name="type"
@@ -166,7 +181,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
                 <ArrowDownLeft aria-hidden="true" size={20} />
                 <span>Saya dihutang</span>
               </label>
-              <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 p-3 focus-within:outline-2 focus-within:outline-forest ${values.type === "i_owe" ? "border-forest bg-leaf" : "border-leaf"}`}>
+              <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 p-3 focus-within:outline-2 focus-within:outline-woody ${values.type === "i_owe" ? "border-woody bg-cashmere" : "border-cashmere"}`}>
                 <input
                   type="radio"
                   name="type"
@@ -191,23 +206,38 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
             />
           </FormField>
 
-          <FormField id="amount" label="Nominal (Rupiah)" error={fieldErrors.amount}>
-            <input
-              id="amount"
-              type="text"
-              inputMode="numeric"
-              value={values.amount}
-              onChange={(event) => updateValue("amount", event.target.value.replace(/\D/g, ""))}
-              className={inputClassName}
-            />
+          <FormField id="amount" label="Nominal" error={fieldErrors.amount}>
+            <div className="flex min-h-12 items-center rounded-xl border-2 border-cashmere bg-linen focus-within:border-woody focus-within:outline-2 focus-within:outline-woody">
+              <span aria-hidden="true" className="pl-4 font-bold">
+                Rp
+              </span>
+              <input
+                id="amount"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={formatRupiahInput(values.amount)}
+                onChange={(event) =>
+                  updateValue("amount", event.target.value.replace(/\D/g, ""))
+                }
+                className="min-h-11 min-w-0 flex-1 bg-linen px-3 text-woody outline-none"
+              />
+            </div>
           </FormField>
 
           <FormField id="due_date" label="Tanggal" error={fieldErrors.due_date}>
             <input
               id="due_date"
-              type="date"
-              value={values.due_date}
-              onChange={(event) => updateValue("due_date", event.target.value)}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="dd/mm/yyyy"
+              value={dateInput}
+              onChange={(event) => {
+                setDateInput(formatDateInputTyping(event.target.value));
+                setFieldErrors((current) => ({ ...current, due_date: undefined }));
+                setFormError(null);
+              }}
               className={inputClassName}
             />
           </FormField>
@@ -224,7 +254,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
           </FormField>
 
           {formError && (
-            <p role="alert" className="rounded-xl bg-leaf p-3 font-semibold">
+            <p role="alert" className="rounded-xl bg-cashmere p-3 font-semibold">
               {formError}
             </p>
           )}
@@ -233,7 +263,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
             type="submit"
             disabled={submitting}
             aria-busy={submitting}
-            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-sage px-5 font-bold focus:outline-2 focus:outline-forest disabled:cursor-wait disabled:bg-leaf"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-toast px-5 font-bold focus:outline-2 focus:outline-woody disabled:cursor-wait disabled:bg-cashmere"
           >
             <Save aria-hidden="true" size={19} />
             {submitting ? "Menyimpan..." : isEdit ? "Simpan perubahan" : "Simpan catatan"}
@@ -244,7 +274,7 @@ export function DebtForm({ mode, debt, onClose, onSuccess }: DebtFormProps) {
 }
 
 const inputClassName =
-  "min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-forest focus:outline-2 focus:outline-forest";
+  "min-h-12 rounded-xl border-2 border-cashmere bg-linen px-4 text-woody outline-none focus:border-woody focus:outline-2 focus:outline-woody";
 
 function FieldError({ message }: { message: string }) {
   return (

@@ -29,7 +29,9 @@ Verifikasi Supabase live dengan dua akun belum dijalankan karena credential dan 
 - Daftar menampilkan nama, arah hutang, nominal, tanggal relatif, tanggal absolut, catatan, dan status lunas.
 - Filter status dan arah hutang dapat dipakai bersamaan tanpa mengubah summary global.
 - Loading, empty database, empty filtered, fetch error, dan mutation feedback tersedia.
-- Layout mobile-first menggunakan empat warna yang ditentukan di brief.
+- Layout mobile-first memakai palette warm woody brown, ferra, toast, cashmere, dan linen.
+- Input nominal menampilkan prefix Rupiah dan pemisah ribuan tanpa mengubah nilai presisi yang dikirim ke API.
+- Input tanggal memakai format Indonesia `dd/mm/yyyy`, lalu dinormalisasi menjadi `YYYY-MM-DD` untuk database.
 
 ### Pengelolaan kasbon
 
@@ -115,7 +117,10 @@ Salin `.env.example` menjadi `.env.local`, lalu isi environment aplikasi:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
+
+Pada production, isi `NEXT_PUBLIC_SITE_URL` dengan origin aplikasi Vercel tanpa trailing slash. URL `${NEXT_PUBLIC_SITE_URL}/auth/confirm` juga harus terdaftar pada Supabase Auth Redirect URLs agar link konfirmasi kembali ke aplikasi.
 
 Jangan memasukkan service-role key ke variable `NEXT_PUBLIC_*`, source code, atau repository.
 

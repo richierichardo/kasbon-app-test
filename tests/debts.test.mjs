@@ -3,8 +3,13 @@ import test from "node:test";
 
 import { parseStatusFilter, parseTypeFilter } from "../lib/debts/filters.ts";
 import {
+  formatDateInput,
+  formatDateInputTyping,
   formatDebtDate,
+  formatDebtDateAbsolute,
   formatRupiah,
+  formatRupiahInput,
+  parseDateInput,
 } from "../lib/debts/format.ts";
 import { buildDebtSummary } from "../lib/debts/summary.ts";
 import {
@@ -142,6 +147,21 @@ test("filter parsers accept supported values and reject invalid values", () => {
 test("Rupiah formatting preserves integers above Number.MAX_SAFE_INTEGER", () => {
   const formatted = formatRupiah("9007199254740993").replaceAll(/\s/g, " ");
   assert.match(formatted, /^Rp\s?9\.007\.199\.254\.740\.993$/);
+  assert.equal(formatRupiahInput("1000"), "1.000");
+  assert.equal(formatRupiahInput("10000"), "10.000");
+  assert.equal(formatRupiahInput("9007199254740993"), "9.007.199.254.740.993");
+});
+
+test("date input uses dd/mm/yyyy while API keeps ISO dates", () => {
+  assert.equal(formatDateInput("2026-10-05"), "05/10/2026");
+  assert.equal(formatDateInputTyping("05102026"), "05/10/2026");
+  assert.equal(formatDateInputTyping("05-10-2026"), "05/10/2026");
+  assert.equal(parseDateInput("05/10/2026"), "2026-10-05");
+  assert.equal(parseDateInput("5/10/2026"), null);
+  assert.equal(
+    formatDebtDateAbsolute("2026-10-05", "2026-01-01T00:00:00.000Z"),
+    "05/10/2026",
+  );
 });
 
 test("relative date formatting follows the local calendar", () => {

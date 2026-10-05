@@ -16,17 +16,17 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-mist text-forest">
-      <header className="bg-forest px-6 py-4 text-mist">
+    <main className="min-h-screen bg-linen text-woody">
+      <header className="bg-woody px-6 py-4 text-linen">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <HandCoins aria-hidden="true" className="text-sage" size={28} />
+            <HandCoins aria-hidden="true" className="text-cashmere" size={28} />
             <p className="font-bold">Kasbon</p>
           </div>
           <form action={signOut}>
             <button
               type="submit"
-              className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-semibold underline focus:outline-2 focus:outline-sage"
+              className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-semibold underline focus:outline-2 focus:outline-cashmere"
             >
               <LogOut aria-hidden="true" size={18} />
               Keluar

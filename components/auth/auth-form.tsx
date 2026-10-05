@@ -34,7 +34,7 @@ export function AuthForm({ action, mode, initialError }: AuthFormProps) {
           autoComplete="email"
           defaultValue={state.email}
           required
-          className="min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-forest focus:outline-2 focus:outline-forest"
+          className="min-h-12 rounded-xl border-2 border-cashmere bg-linen px-4 text-woody outline-none focus:border-woody focus:outline-2 focus:outline-woody"
         />
       </div>
 
@@ -49,19 +49,19 @@ export function AuthForm({ action, mode, initialError }: AuthFormProps) {
           autoComplete={isLogin ? "current-password" : "new-password"}
           minLength={6}
           required
-          className="min-h-12 rounded-xl border-2 border-leaf bg-mist px-4 text-forest outline-none focus:border-forest focus:outline-2 focus:outline-forest"
+          className="min-h-12 rounded-xl border-2 border-cashmere bg-linen px-4 text-woody outline-none focus:border-woody focus:outline-2 focus:outline-woody"
         />
         {!isLogin && <p className="text-sm">Minimal 6 karakter.</p>}
       </div>
 
       {state.error && (
-        <p role="alert" className="rounded-xl bg-leaf p-3 font-semibold">
+        <p role="alert" className="rounded-xl bg-cashmere p-3 font-semibold">
           {state.error}
         </p>
       )}
 
       {state.message && (
-        <p role="status" className="rounded-xl bg-leaf p-3 font-semibold">
+        <p role="status" className="rounded-xl bg-cashmere p-3 font-semibold">
           {state.message}
         </p>
       )}
@@ -70,7 +70,7 @@ export function AuthForm({ action, mode, initialError }: AuthFormProps) {
         type="submit"
         disabled={pending}
         aria-busy={pending}
-        className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-sage px-5 font-bold text-forest focus:outline-2 focus:outline-forest disabled:cursor-wait disabled:bg-leaf"
+        className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-toast px-5 font-bold text-woody focus:outline-2 focus:outline-woody disabled:cursor-wait disabled:bg-cashmere"
       >
         {isLogin ? (
           <LogIn aria-hidden="true" size={19} />
@@ -84,7 +84,7 @@ export function AuthForm({ action, mode, initialError }: AuthFormProps) {
         {isLogin ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
         <Link
           href={isLogin ? "/signup" : "/login"}
-          className="font-bold underline focus:outline-2 focus:outline-forest"
+          className="font-bold underline focus:outline-2 focus:outline-woody"
         >
           {isLogin ? "Daftar" : "Masuk"}
         </Link>
