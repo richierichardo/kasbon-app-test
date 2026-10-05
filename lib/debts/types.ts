@@ -59,6 +59,13 @@ export type DebtListResponse = {
   summary: DebtSummary;
 };
 
+export type DeleteDebtResponse = {
+  data: {
+    id: string;
+    deleted: true;
+  };
+};
+
 export type ApiErrorResponse = {
   error: string;
   fields?: CreateDebtFieldErrors | UpdateDebtFieldErrors;

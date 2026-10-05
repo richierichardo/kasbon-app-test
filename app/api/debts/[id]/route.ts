@@ -130,3 +130,54 @@ export async function PATCH(
 
   return NextResponse.json({ data: toDebtDTO(data) });
 }
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+
+  if (!uuidPattern.test(id)) {
+    return NextResponse.json(
+      { error: "ID catatan kasbon belum valid." },
+      { status: 400 },
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Kamu harus masuk terlebih dahulu." },
+      { status: 401 },
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("debts")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: "Catatan kasbon belum bisa dihapus. Coba lagi sebentar." },
+      { status: 500 },
+    );
+  }
+
+  if (!data) {
+    return notFoundResponse();
+  }
+
+  return NextResponse.json({
+    data: {
+      id: data.id,
+      deleted: true as const,
+    },
+  });
+}

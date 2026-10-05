@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { DebtForm } from "@/components/dashboard/debt-form";
+import { DeleteDebtDialog } from "@/components/dashboard/delete-debt-dialog";
 import { formatDebtDate, formatRupiah } from "@/lib/debts/format";
 import type {
   ApiErrorResponse,
@@ -102,6 +103,7 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
   const [refresh, setRefresh] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<DebtDTO | null>(null);
+  const [deletingDebt, setDeletingDebt] = useState<DebtDTO | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -230,6 +232,17 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
         />
       )}
 
+      {deletingDebt && (
+        <DeleteDebtDialog
+          debt={deletingDebt}
+          onClose={() => setDeletingDebt(null)}
+          onDeleted={() => {
+            setDeletingDebt(null);
+            setRefresh((current) => current + 1);
+          }}
+        />
+      )}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryCard label="Dihutang ke saya" amount={summary.owed_to_me} />
         <SummaryCard label="Saya hutang" amount={summary.i_owe} />
@@ -245,9 +258,10 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           Status
           <select
             value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as DebtStatusFilter)
-            }
+            onChange={(event) => {
+              setStatus(event.target.value as DebtStatusFilter);
+              setMutationError(null);
+            }}
             className="min-h-11 rounded-xl border-2 border-leaf bg-mist px-3 font-normal text-forest outline-none focus:border-sage"
           >
             <option value="all">Semua status</option>
@@ -259,7 +273,10 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
           Tipe hutang
           <select
             value={type}
-            onChange={(event) => setType(event.target.value as DebtTypeFilter)}
+            onChange={(event) => {
+              setType(event.target.value as DebtTypeFilter);
+              setMutationError(null);
+            }}
             className="min-h-11 rounded-xl border-2 border-leaf bg-mist px-3 font-normal text-forest outline-none focus:border-sage"
           >
             <option value="all">Semua tipe</option>
@@ -285,7 +302,11 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
       )}
 
       {mutationError && (
-        <p role="alert" className="rounded-2xl border-2 border-forest bg-leaf p-4 font-semibold">
+        <p
+          role="alert"
+          aria-live="assertive"
+          className="rounded-2xl border-2 border-forest bg-leaf p-4 font-semibold"
+        >
           {mutationError}
         </p>
       )}
@@ -315,6 +336,19 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
               className="mt-4 min-h-11 rounded-xl bg-sage px-4 font-bold focus:outline-2 focus:outline-forest"
             >
               + Catat baru
+            </button>
+          )}
+          {(status !== "all" || type !== "all") && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatus("all");
+                setType("all");
+                setMutationError(null);
+              }}
+              className="mt-4 min-h-11 rounded-xl border-2 border-leaf px-4 font-bold focus:outline-2 focus:outline-forest"
+            >
+              Reset filter
             </button>
           )}
         </div>
@@ -359,6 +393,14 @@ export function DashboardClient({ userEmail }: DashboardClientProps) {
                     : debt.settled_at === null
                       ? "Tandai lunas"
                       : "Batalkan lunas"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeletingDebt(debt)}
+                  disabled={mutatingId === debt.id}
+                  className="min-h-11 rounded-xl bg-forest px-4 font-bold text-mist focus:outline-2 focus:outline-sage disabled:cursor-not-allowed"
+                >
+                  Hapus
                 </button>
               </div>
             </article>
