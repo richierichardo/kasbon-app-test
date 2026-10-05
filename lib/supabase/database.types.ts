@@ -10,6 +10,7 @@ export type Database = {
           type: DebtType;
           counterpart_name: string;
           amount: string;
+          amount_text: string;
           note: string | null;
           due_date: string | null;
           settled_at: string | null;
@@ -22,6 +23,7 @@ export type Database = {
           type: DebtType;
           counterpart_name: string;
           amount: string;
+          amount_text?: never;
           note?: string | null;
           due_date?: string | null;
           settled_at?: string | null;
@@ -34,6 +36,7 @@ export type Database = {
           type?: DebtType;
           counterpart_name?: string;
           amount?: string;
+          amount_text?: never;
           note?: string | null;
           due_date?: string | null;
           settled_at?: string | null;

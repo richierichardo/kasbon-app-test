@@ -109,11 +109,11 @@ for (const payload of [
 
 test("summary uses BigInt, excludes settled rows, and returns decimal strings", () => {
   const rows = [
-    { type: "owed_to_me", amount: "9007199254740993", settled_at: null },
-    { type: "i_owe", amount: "3", settled_at: null },
+    { type: "owed_to_me", amount_text: "9007199254740993", settled_at: null },
+    { type: "i_owe", amount_text: "3", settled_at: null },
     {
       type: "owed_to_me",
-      amount: "999999999999999999",
+      amount_text: "999999999999999999",
       settled_at: "2026-10-05T00:00:00.000Z",
     },
   ];

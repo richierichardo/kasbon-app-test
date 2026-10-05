@@ -6,18 +6,22 @@ import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
 type DebtRow = Database["public"]["Tables"]["debts"]["Row"];
+type DebtReadRow = Omit<DebtRow, "amount">;
 type DebtUpdate = Database["public"]["Tables"]["debts"]["Update"];
+
+const debtSelect =
+  "id,user_id,type,counterpart_name,amount_text,note,due_date,settled_at,created_at,updated_at";
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function toDebtDTO(row: DebtRow): DebtDTO {
+function toDebtDTO(row: DebtReadRow): DebtDTO {
   return {
     id: row.id,
     user_id: row.user_id,
     type: row.type,
     counterpart_name: row.counterpart_name,
-    amount: String(row.amount),
+    amount: row.amount_text,
     note: row.note,
     due_date: row.due_date,
     settled_at: row.settled_at,
@@ -60,7 +64,7 @@ export async function PATCH(
 
   const { data: existing, error: findError } = await supabase
     .from("debts")
-    .select("*")
+    .select("settled_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -114,7 +118,7 @@ export async function PATCH(
     .from("debts")
     .update(update)
     .eq("id", id)
-    .select("*")
+    .select(debtSelect)
     .maybeSingle();
 
   if (error) {

@@ -14,14 +14,18 @@ import type { Database } from "@/lib/supabase/database.types";
 import { validateCreateDebtInput } from "@/lib/debts/validation";
 
 type DebtRow = Database["public"]["Tables"]["debts"]["Row"];
+type DebtReadRow = Omit<DebtRow, "amount">;
 
-function toDebtDTO(row: DebtRow): DebtDTO {
+const debtSelect =
+  "id,user_id,type,counterpart_name,amount_text,note,due_date,settled_at,created_at,updated_at";
+
+function toDebtDTO(row: DebtReadRow): DebtDTO {
   return {
     id: row.id,
     user_id: row.user_id,
     type: row.type,
     counterpart_name: row.counterpart_name,
-    amount: String(row.amount),
+    amount: row.amount_text,
     note: row.note,
     due_date: row.due_date,
     settled_at: row.settled_at,
@@ -57,10 +61,12 @@ export async function GET(request: Request) {
     );
   }
 
-  const summaryQuery = supabase.from("debts").select("*");
+  const summaryQuery = supabase
+    .from("debts")
+    .select("type,amount_text,settled_at");
   const listQuery = supabase
     .from("debts")
-    .select("*")
+    .select(debtSelect)
     .order("created_at", { ascending: false });
 
   if (status === "unsettled") {
@@ -136,7 +142,7 @@ export async function POST(request: Request) {
       note: input.note ?? null,
       settled_at: null,
     })
-    .select("*")
+    .select(debtSelect)
     .single();
 
   if (error || !data) {

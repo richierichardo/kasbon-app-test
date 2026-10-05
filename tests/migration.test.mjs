@@ -6,6 +6,10 @@ const migrationUrl = new URL(
   "../supabase/migrations/0001_create_debts.sql",
   import.meta.url,
 );
+const amountTextMigrationUrl = new URL(
+  "../supabase/migrations/0002_add_debt_amount_text.sql",
+  import.meta.url,
+);
 
 test("migration keeps RLS, grants, and all owner policies", async () => {
   const sql = (await readFile(migrationUrl, "utf8"))
@@ -24,4 +28,13 @@ test("migration keeps RLS, grants, and all owner policies", async () => {
   );
   assert.doesNotMatch(sql, /to anon/);
   assert.doesNotMatch(sql, /service_role/);
+});
+
+test("migration exposes bigint amount as exact generated text", async () => {
+  const sql = (await readFile(amountTextMigrationUrl, "utf8"))
+    .replaceAll(/\s+/g, " ")
+    .toLowerCase();
+
+  assert.match(sql, /add column amount_text text/);
+  assert.match(sql, /generated always as \(amount::text\) stored/);
 });

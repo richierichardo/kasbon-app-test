@@ -253,6 +253,16 @@ async function run() {
     }
     pass("filter, UUID, JSON, dan payload invalid menghasilkan 400");
 
+    const baselineResult = await appRequest(
+      "/api/debts?status=all&type=all",
+      { cookie: cookieA },
+    );
+    expectStatus(baselineResult, 200, "GET baseline debts");
+    const baseline = {
+      owedToMe: BigInt(baselineResult.payload.summary.owed_to_me),
+      iOwe: BigInt(baselineResult.payload.summary.i_owe),
+    };
+
     const debtA = await createDebt(cookieA, ownerA, {
       ...baseInput,
       amount: "9007199254740993",
@@ -276,9 +286,20 @@ async function run() {
       cookie: cookieA,
     });
     expectStatus(list, 200, "GET debts");
-    ensure(list.payload.summary.owed_to_me === "9007199254740993", "Total owed salah.");
-    ensure(list.payload.summary.i_owe === "3", "Total i_owe salah.");
-    ensure(list.payload.summary.net === "9007199254740990", "Net BigInt salah.");
+    const expectedOwed = baseline.owedToMe + 9007199254740993n;
+    const expectedIOwe = baseline.iOwe + 3n;
+    ensure(
+      list.payload.summary.owed_to_me === expectedOwed.toString(),
+      `Total owed salah: expected ${expectedOwed}, actual ${list.payload.summary.owed_to_me}.`,
+    );
+    ensure(
+      list.payload.summary.i_owe === expectedIOwe.toString(),
+      `Total i_owe salah: expected ${expectedIOwe}, actual ${list.payload.summary.i_owe}.`,
+    );
+    ensure(
+      list.payload.summary.net === (expectedOwed - expectedIOwe).toString(),
+      "Net BigInt salah.",
+    );
     ensure(
       list.payload.data.every((row) => row.user_id === ownerA.user.id),
       "List API membocorkan row user lain.",
@@ -290,7 +311,7 @@ async function run() {
     expectStatus(filtered, 200, "GET filtered debts");
     ensure(filtered.payload.data.every((row) => row.type === "i_owe"), "Filter type gagal.");
     ensure(
-      filtered.payload.summary.net === "9007199254740990",
+      filtered.payload.summary.net === (expectedOwed - expectedIOwe).toString(),
       "Filter list mengubah summary global.",
     );
     pass("create, list, filter, dan kalkulasi BigInt benar");
@@ -334,7 +355,10 @@ async function run() {
       "Settlement kedua mengubah timestamp pertama.",
     );
     const settledList = await appRequest("/api/debts", { cookie: cookieA });
-    ensure(settledList.payload.summary.owed_to_me === "0", "Debt lunas masih dihitung.");
+    ensure(
+      settledList.payload.summary.owed_to_me === baseline.owedToMe.toString(),
+      "Debt lunas masih dihitung.",
+    );
     const unsettle = await appRequest(`/api/debts/${debtA.id}`, {
       method: "PATCH",
       cookie: cookieA,
@@ -343,10 +367,12 @@ async function run() {
     expectStatus(unsettle, 200, "Unsettle");
     ensure(unsettle.payload.data.settled_at === null, "Unsettle tidak persisten.");
     const unsettledList = await appRequest("/api/debts", { cookie: cookieA });
+    const expectedEditedIOwe = baseline.iOwe + 5n;
     ensure(
-      unsettledList.payload.summary.owed_to_me === "9007199254740993" &&
-        unsettledList.payload.summary.i_owe === "5" &&
-        unsettledList.payload.summary.net === "9007199254740988",
+      unsettledList.payload.summary.owed_to_me === expectedOwed.toString() &&
+        unsettledList.payload.summary.i_owe === expectedEditedIOwe.toString() &&
+        unsettledList.payload.summary.net ===
+          (expectedOwed - expectedEditedIOwe).toString(),
       "Unsettle tidak mengembalikan summary outstanding.",
     );
     pass("settlement persisten dan idempotent");

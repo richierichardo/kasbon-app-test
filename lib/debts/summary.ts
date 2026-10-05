@@ -1,10 +1,9 @@
 import type { DebtSummary } from "@/lib/debts/types";
-import type { Database } from "@/lib/supabase/database.types";
-
-type SummaryDebt = Pick<
-  Database["public"]["Tables"]["debts"]["Row"],
-  "amount" | "settled_at" | "type"
->;
+type SummaryDebt = {
+  amount_text: string;
+  settled_at: string | null;
+  type: "owed_to_me" | "i_owe";
+};
 
 export function buildDebtSummary(rows: readonly SummaryDebt[]): DebtSummary {
   let owedToMe = BigInt(0);
@@ -16,9 +15,9 @@ export function buildDebtSummary(rows: readonly SummaryDebt[]): DebtSummary {
     }
 
     if (row.type === "owed_to_me") {
-      owedToMe += BigInt(String(row.amount));
+      owedToMe += BigInt(row.amount_text);
     } else {
-      iOwe += BigInt(String(row.amount));
+      iOwe += BigInt(row.amount_text);
     }
   }
 
